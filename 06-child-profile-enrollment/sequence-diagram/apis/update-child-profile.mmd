@@ -1,0 +1,73 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title PUT /api/child-profiles/{id}
+    actor User as User (Parent/Teacher/Admin)
+    participant UI as UpdateChildProfileUI
+    participant Endpoint as :ChildProfilesController
+    participant Service as :ChildProfileService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Sửa đổi thông tin hồ sơ trẻ và nhấn Lưu
+    activate UI
+    UI->>Endpoint: 2.1 PUT /api/child-profiles/{id} (UpdateChildProfileRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 UpdateChildProfileAsync(id, request)
+        activate Service
+
+        Service->>DB: 3.2 ChildProfileRepository.GetFirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 ChildProfile entity or null
+        deactivate Database
+        deactivate DB
+
+        alt ChildProfile not found
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            Endpoint-->>UI: 3.5.2 404 Not Found (Không tìm thấy hồ sơ trẻ.)
+        else ChildProfile exists
+            alt Request contains UserId to update
+                Service->>DB: 3.6 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted && u.IsActive)
+                activate DB
+                DB->>Database: 3.7 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.8 User entity or null
+                deactivate Database
+                deactivate DB
+
+                alt User not found/inactive
+                    Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Người dùng liên kết không tồn tại.")
+                    Endpoint-->>UI: 3.9.2 400 Bad Request (Người dùng liên kết...)
+                else User valid
+                    note over Service: Update childProfile.UserId
+                end
+            end
+
+            note over Service: Update other profile fields if provided
+            
+            Service->>DB: 3.10 ChildProfileRepository.Update(childProfile)
+            Service->>DB: 3.11 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.12 Execute UPDATE query
+            activate Database
+            Database-->>DB: 3.13 Rows affected
+            deactivate Database
+            deactivate DB
+
+            alt Save changes failed
+                Service-->>Endpoint: 3.14.1 (Succeeded = false, Error = "Cập nhật hồ sơ trẻ thất bại.")
+                Endpoint-->>UI: 3.14.2 400 Bad Request (Cập nhật hồ sơ trẻ thất bại.)
+            else Save changes success
+                Service-->>Endpoint: 3.15.1 (Succeeded = true, ChildProfileResponse)
+                deactivate Service
+                Endpoint-->>UI: 3.15.2 200 OK (ChildProfileResponse)
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

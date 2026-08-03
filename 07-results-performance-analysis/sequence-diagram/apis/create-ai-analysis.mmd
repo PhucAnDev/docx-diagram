@@ -1,0 +1,55 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/Analyze
+    actor User as User (Admin/Teacher)
+    participant UI as CreateAnalyzeUI
+    participant Endpoint as :AnalyzeController
+    participant Service as :AnalyzeService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Điền thông tin đánh giá lâm sàng cho trẻ và nhấn Lưu
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/Analyze (CreateAnalyzeRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateAnalyzeAsync(request)
+        activate Service
+
+        Service->>DB: 3.2 ChildProfileRepository.GetFirstOrDefaultAsync(c => c.Id == ChildId && !c.IsDeleted)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 ChildProfile entity or null
+        deactivate Database
+        deactivate DB
+
+        alt Child profile not found (child == null)
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Child profile not found.")
+            Endpoint-->>UI: 3.5.2 400 Bad Request (Child profile not found.)
+        else Child profile exists
+            note over Service: Map request DTO to Analyze entity
+            
+            Service->>DB: 3.6 AnalyzeRepository.AddAsync(analyze)
+            activate DB
+            DB-->>Service: 3.7 Success
+            deactivate DB
+
+            Service->>DB: 3.8 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.9 Execute INSERT query
+            activate Database
+            Database-->>DB: 3.10 Rows affected
+            deactivate Database
+            deactivate DB
+
+            Service-->>Endpoint: 3.11 (Succeeded = true, AnalyzeResponse)
+            deactivate Service
+            Endpoint-->>UI: 3.12 200 OK (AnalyzeResponse)
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

@@ -1,0 +1,87 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class UsersController {
+        -userService: IUserService
+        +CreateAccount(request: CreateAccountRequest) Task~ActionResult~
+    }
+
+    class CreateAccountRequest {
+        +FullName: string
+        +Email: string
+        +Phone: string
+        +Gender: string
+        +Specialty: string
+        +RoleName: UserRole
+    }
+
+    class IUserService {
+        <<interface>>
+        +CreateAccountAsync(request: CreateAccountRequest) Task~Tuple~bool,IEnumerable~string~,CreateAccountResponse~~~~
+    }
+
+    class UserService {
+        -unitOfWork: IUnitOfWork
+        -mailService: IMailService
+        -configuration: IConfiguration
+        +CreateAccountAsync(request: CreateAccountRequest) Task~Tuple~bool,IEnumerable~string~,CreateAccountResponse~~~~
+    }
+
+    class IMailService {
+        <<interface>>
+        +SendEmailAsync(to: string, subject: string, body: string) Task
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +UserRepository: IUserRepository
+        +RoleRepository: IRoleRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +UserRepository: IUserRepository
+        +RoleRepository: IRoleRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class CreateAccountResponse {
+        +UserId: int
+        +FullName: string
+        +Email: string
+        +RoleName: string
+        +Message: string
+    }
+
+    class User {
+        +PasswordHash: string
+        +FullName: string
+        +Email: string
+        +Phone: string
+        +Gender: string
+        +Specialty: string
+        +RoleId: int
+        +IsActive: bool
+        +IsEmailVerified: bool
+        +MustChangePassword: bool
+        +VerifyToken: string
+        +VerifyTokenExpiry: DateTime?
+    }
+
+    class Role {
+        +RoleName: UserRole
+        +IsActive: bool
+    }
+
+    UsersController ..> CreateAccountRequest : uses
+    UsersController ..> IUserService : uses
+    IUserService <.. UserService : implements
+    UserService ..> IMailService : uses
+    UserService ..> IUnitOfWork : uses
+    UserService ..> CreateAccountResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> User : uses
+    UnitOfWork ..> Role : uses
+    User ..> Role : uses

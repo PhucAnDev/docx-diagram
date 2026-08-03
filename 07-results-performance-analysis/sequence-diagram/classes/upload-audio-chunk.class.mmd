@@ -1,0 +1,40 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class FilesController {
+        -storage: IStorageService
+        -configuration: IConfiguration
+        +UploadChunk(request: UploadAudioChunkRequest, ct: CancellationToken) Task~ActionResult~
+    }
+
+    class UploadAudioChunkRequest {
+        +ChildProfileId: int
+        +SessionId: string
+        +ChunkIndex: int
+        +AudioFile: IFormFile
+        +IsFinalChunk: bool
+    }
+
+    class UploadAudioChunkResponse {
+        +Status: string
+        +ChunkIndex: int
+        +VoiceUrl: string?
+    }
+
+    class IStorageService {
+        <<interface>>
+        +UploadAsync(stream: Stream, objectName: string, contentType: string, ct: CancellationToken) Task
+        +GetPresignedUrlAsync(objectName: string, expirySeconds: int, ct: CancellationToken) Task~string~
+    }
+
+    class MinIoStorageService {
+        -minioClient: IMinioClient
+        +UploadAsync(stream: Stream, objectName: string, contentType: string, ct: CancellationToken) Task
+        +GetPresignedUrlAsync(objectName: string, expirySeconds: int, ct: CancellationToken) Task~string~
+    }
+
+    FilesController ..> UploadAudioChunkRequest : uses
+    FilesController ..> UploadAudioChunkResponse : uses
+    FilesController ..> IStorageService : uses
+    IStorageService <.. MinIoStorageService : implements

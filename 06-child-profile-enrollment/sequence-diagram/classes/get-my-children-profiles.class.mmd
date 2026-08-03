@@ -1,0 +1,58 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ChildProfilesController {
+        -childProfileService: IChildProfileService
+        +GetMyChildren() Task~ActionResult~
+    }
+
+    class IChildProfileService {
+        <<interface>>
+        +GetChildProfilesByParentIdAsync(parentId: int) Task~IEnumerable~ChildProfileResponse~~
+    }
+
+    class ChildProfileService {
+        -unitOfWork: IUnitOfWork
+        +GetChildProfilesByParentIdAsync(parentId: int) Task~IEnumerable~ChildProfileResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ChildProfileRepository: IChildProfileRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ChildProfileRepository: IChildProfileRepository
+    }
+
+    class ChildProfileResponse {
+        +Id: int
+        +UserId: int
+        +FullName: string
+        +Avatar: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+        +Status: string
+        +Note: string
+    }
+
+    class ChildProfile {
+        +UserId: int
+        +FullName: string
+        +Avatar: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+        +Status: string
+        +Note: string
+    }
+
+    ChildProfilesController ..> IChildProfileService : uses
+    IChildProfileService <.. ChildProfileService : implements
+    ChildProfileService ..> IUnitOfWork : uses
+    ChildProfileService ..> ChildProfileResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ChildProfile : uses

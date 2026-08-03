@@ -1,0 +1,133 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/results/submit
+    actor Child as Child (Godot Client)
+    participant UI as result-api.gd
+    participant Endpoint as :ResultsController
+    participant Service as :ResultService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Child->>UI: 1.1 Hoàn thành bài luyện tập trên kính VR
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/results/submit (SubmitResultRequest)
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 SubmitAsync(request)
+    activate Service
+
+    alt ExerciseId and LessonId both provided, or neither provided
+        Service-->>Endpoint: 3.2.1 (Succeeded = false, Errors)
+        Endpoint-->>UI: 3.2.2 400 Bad Request (Errors)
+    else Correct identification parameters
+        Service->>DB: 3.3 ResultRepository.GetBySessionIdAsync(SessionId)
+        activate DB
+        DB->>Database: 3.4 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.5 Existing Result or null
+        deactivate Database
+        deactivate DB
+
+        alt Result already exists for SessionId (Idempotent check)
+            Service-->>Endpoint: 3.6.1 (Succeeded = true, Existing ResultResponse)
+            Endpoint-->>UI: 3.6.2 200 OK (Existing ResultResponse)
+        else New Session
+            Service->>DB: 3.7 ChildProfileRepository.GetByIdAsync(ChildId)
+            activate DB
+            DB->>Database: 3.8 Execute SELECT query
+            activate Database
+            Database-->>DB: 3.9 ChildProfile entity or null
+            deactivate Database
+            deactivate DB
+
+            alt Child not found or Child.Status != "Active"
+                Service-->>Endpoint: 3.10.1 (Succeeded = false, Errors)
+                Endpoint-->>UI: 3.10.2 400 Bad Request/404 Not Found (Errors)
+            else Child active
+                Service->>DB: 3.11 EnrollmentRepository.GetByChildIdAsync(ChildId)
+                activate DB
+                DB->>Database: 3.12 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.13 List of Enrollments
+                deactivate Database
+                deactivate DB
+
+                alt No active Enrollment found for Child
+                    Service-->>Endpoint: 3.14.1 (Succeeded = false, Error = "Trẻ chưa có hồ sơ ghi danh hoạt động...")
+                    Endpoint-->>UI: 3.14.2 400 Bad Request (Trẻ chưa có hồ sơ ghi danh...)
+                else Active Enrollment exists
+                    alt resultType == ResultType.Exercise
+                        Service->>DB: 3.15 ExerciseRepository.GetByIdAsync(ExerciseId)
+                        activate DB
+                        DB->>Database: 3.16 Execute SELECT query
+                        activate Database
+                        Database-->>DB: 3.17 Exercise entity or null
+                        deactivate Database
+                        deactivate DB
+
+                        alt Exercise not found or Exercise.Status != "Active"
+                            Service-->>Endpoint: 3.18.1 (Succeeded = false, Errors)
+                            Endpoint-->>UI: 3.18.2 400 Bad Request/404 Not Found (Errors)
+                        end
+                    else resultType == ResultType.Lesson
+                        Service->>DB: 3.19 LessonRepository.GetByIdAsync(LessonId)
+                        activate DB
+                        DB->>Database: 3.20 Execute SELECT query
+                        activate Database
+                        Database-->>DB: 3.21 Lesson entity or null
+                        deactivate Database
+                        deactivate DB
+
+                        alt Lesson not found or Lesson.Status != "Active"
+                            Service-->>Endpoint: 3.22.1 (Succeeded = false, Errors)
+                            Endpoint-->>UI: 3.22.2 400 Bad Request/404 Not Found (Errors)
+                        end
+                    end
+                    
+                    alt Valid target entity and Active
+                        alt Score out of range or DurationSeconds < 0 or CompletionStatus is invalid
+                            Service-->>Endpoint: 3.23.1 (Succeeded = false, Errors)
+                            Endpoint-->>UI: 3.23.2 400 Bad Request (Errors)
+                        else Validation success
+                            Service->>DB: 3.24 ResultRepository.GetAttemptCountAsync(ChildId, ExerciseId, LessonId)
+                            activate DB
+                            DB->>Database: 3.25 Execute COUNT query
+                            activate Database
+                            Database-->>DB: 3.26 Integer count
+                            deactivate Database
+                            deactivate DB
+
+                            note over Service: entity.AttemptNumber = count + 1, entity.IsFinalized = (Status == "Completed")
+                            
+                            Service->>DB: 3.27 ResultRepository.AddAsync(result)
+                            activate DB
+                            DB-->>Service: 3.28 Success
+                            deactivate DB
+
+                            Service->>DB: 3.29 SaveChangesAsync()
+                            activate DB
+                            DB->>Database: 3.30 Execute INSERT query
+                            activate Database
+                            Database-->>DB: 3.31 Rows affected
+                            deactivate Database
+                            deactivate DB
+
+                            Service->>DB: 3.32 ResultRepository.GetWithDetailsAsync(result.Id)
+                            activate DB
+                            DB->>Database: 3.33 Execute SELECT with includes
+                            activate Database
+                            Database-->>DB: 3.34 Full Result entity with details
+                            deactivate Database
+                            deactivate DB
+
+                            Service-->>Endpoint: 3.35 (Succeeded = true, ResultResponse)
+                            deactivate Service
+                            Endpoint-->>UI: 3.36 200 OK (ResultResponse)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

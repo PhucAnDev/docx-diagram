@@ -1,0 +1,75 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class EnrollmentsController {
+        -enrollmentService: IEnrollmentService
+        +GetList(pageNumber: int, pageSize: int, status: string?, classId: int?, learningLevel: string?) Task~ActionResult~
+    }
+
+    class IEnrollmentService {
+        <<interface>>
+        +GetListEnrollmentAsync(pageNumber: int, pageSize: int, status: string?, classId: int?, learningLevel: string?) Task~PagedResponse~EnrollmentResponse~~
+    }
+
+    class EnrollmentService {
+        -unitOfWork: IUnitOfWork
+        +GetListEnrollmentAsync(pageNumber: int, pageSize: int, status: string?, classId: int?, learningLevel: string?) Task~PagedResponse~EnrollmentResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +EnrollmentRepository: IEnrollmentRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +EnrollmentRepository: IEnrollmentRepository
+    }
+
+    class EnrollmentResponse {
+        +Id: int
+        +ChildId: int
+        +ClassId: int
+        +EnrollmentDate: DateTime
+        +Status: string
+        +ChildName: string
+        +ClassName: string
+        +TeacherName: string
+        +ProgramName: string
+        +SemesterName: string
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class Enrollment {
+        +ChildId: int
+        +ClassId: int
+        +EnrollmentDate: DateTime
+        +Status: string
+    }
+
+    class ChildProfile {
+        +FullName: string
+        +LearningLevel: string
+    }
+
+    class Classroom {
+        +ClassName: string
+    }
+
+    EnrollmentsController ..> IEnrollmentService : uses
+    IEnrollmentService <.. EnrollmentService : implements
+    EnrollmentService ..> IUnitOfWork : uses
+    EnrollmentService ..> PagedResponse~EnrollmentResponse~ : uses
+    PagedResponse~EnrollmentResponse~ ..> EnrollmentResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Enrollment : uses
+    Enrollment ..> ChildProfile : uses
+    Enrollment ..> Classroom : uses

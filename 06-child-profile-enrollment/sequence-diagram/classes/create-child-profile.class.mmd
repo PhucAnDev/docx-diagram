@@ -1,0 +1,83 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ChildProfilesController {
+        -childProfileService: IChildProfileService
+        +Create(request: CreateChildProfileRequest) Task~ActionResult~
+    }
+
+    class CreateChildProfileRequest {
+        +UserId: int
+        +FullName: string
+        +Avatar: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+        +Status: string
+        +Note: string
+    }
+
+    class IChildProfileService {
+        <<interface>>
+        +CreateChildProfileAsync(request: CreateChildProfileRequest) Task~Tuple~bool,IEnumerable~string~,ChildProfileResponse~~~~
+    }
+
+    class ChildProfileService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +CreateChildProfileAsync(request: CreateChildProfileRequest) Task~Tuple~bool,IEnumerable~string~,ChildProfileResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ChildProfileRepository: IChildProfileRepository
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ChildProfileRepository: IChildProfileRepository
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ChildProfileResponse {
+        +Id: int
+        +UserId: int
+        +FullName: string
+        +Avatar: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+        +Status: string
+        +Note: string
+    }
+
+    class ChildProfile {
+        +UserId: int
+        +FullName: string
+        +Avatar: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+        +Status: string
+        +Note: string
+    }
+
+    class User {
+        +FullName: string
+        +IsActive: bool
+        +IsDeleted: bool
+    }
+
+    ChildProfilesController ..> CreateChildProfileRequest : uses
+    ChildProfilesController ..> IChildProfileService : uses
+    IChildProfileService <.. ChildProfileService : implements
+    ChildProfileService ..> IUnitOfWork : uses
+    ChildProfileService ..> ChildProfileResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ChildProfile : uses
+    UnitOfWork ..> User : uses
+    ChildProfile ..> User : uses

@@ -1,0 +1,64 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/report
+    actor User as User (Admin/Teacher/Parent)
+    participant UI as CreateReportUI
+    participant Endpoint as :ReportController
+    participant Service as :ReportService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Yêu cầu xuất báo cáo học tập (chọn phân tích AI, định dạng, link file)
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/report (CreateReportRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateReportAsync(generatedBy, request)
+        activate Service
+
+        Service->>DB: 3.2 AnalyzeRepository.GetFirstOrDefaultAsync(a => a.Id == request.AnalyzeId && !a.IsDeleted, includeProperties: "Child.Results")
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query with child, results
+        activate Database
+        Database-->>DB: 3.4 Analyze entity with Child and Results
+        deactivate Database
+        deactivate DB
+
+        alt Analyze not found
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Analyze '...' không tồn tại.")
+            Endpoint-->>UI: 3.5.2 400 Bad Request (Analyze '...' không tồn tại.)
+        else Analyze exists
+            alt No finalized results found for Child
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không có Result nào được finalized để generate report.")
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Không có Result nào...)
+            else Finalized results exist
+                note over Service: Create Report entity
+                
+                Service->>DB: 3.7 ReportRepository.AddAsync(report)
+                Service->>DB: 3.8 SaveChangesAsync()
+                activate DB
+                DB->>Database: 3.9 Execute INSERT query
+                activate Database
+                Database-->>DB: 3.10 Rows affected
+                deactivate Database
+                deactivate DB
+
+                Service->>DB: 3.11 ReportRepository.GetFirstOrDefaultAsync(r => r.Id == report.Id, includeProperties: "GeneratedByUser")
+                activate DB
+                DB->>Database: 3.12 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.13 Created Report entity with user details
+                deactivate Database
+                deactivate DB
+
+                Service-->>Endpoint: 3.14 (Succeeded = true, ReportResponse)
+                deactivate Service
+                Endpoint-->>UI: 3.15 200 OK (ReportResponse)
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

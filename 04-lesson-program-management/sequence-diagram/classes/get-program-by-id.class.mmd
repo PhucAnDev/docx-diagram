@@ -1,0 +1,73 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ProgramsController {
+        -programService: IProgramService
+        +GetById(id: int) Task~ActionResult~
+    }
+
+    class IProgramService {
+        <<interface>>
+        +GetProgramByIdAsync(id: int) Task~ProgramResponse~
+    }
+
+    class ProgramService {
+        -unitOfWork: IUnitOfWork
+        +GetProgramByIdAsync(id: int) Task~ProgramResponse~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ProgramRepository: IProgramRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ProgramRepository: IProgramRepository
+    }
+
+    class ProgramResponse {
+        +Id: int
+        +ProgramName: string
+        +Description: string
+        +TargetAgeFrom: int
+        +TargetAgeTo: int
+        +Language: string
+        +Status: string
+        +Lessons: List~LessonResponse~
+    }
+
+    class LessonResponse {
+        +Id: int
+        +LessonName: string
+        +LessonOrder: int
+        +TargetSkill: string
+        +Status: string
+    }
+
+    class Program {
+        +ProgramName: string
+        +Description: string
+        +TargetAgeFrom: int
+        +TargetAgeTo: int
+        +Language: string
+        +Status: string
+        +Lessons: ICollection~Lesson~
+    }
+
+    class Lesson {
+        +LessonName: string
+        +LessonOrder: int
+        +TargetSkill: string
+        +Status: string
+    }
+
+    ProgramsController ..> IProgramService : uses
+    IProgramService <.. ProgramService : implements
+    ProgramService ..> IUnitOfWork : uses
+    ProgramService ..> ProgramResponse : uses
+    ProgramResponse ..> LessonResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Program : uses
+    Program ..> Lesson : uses

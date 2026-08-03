@@ -1,0 +1,107 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title PUT /api/semesters/{id}
+    actor Admin as Admin
+    participant UI as UpdateSemesterUI
+    participant Endpoint as :SemestersController
+    participant Service as :SemesterService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Admin->>UI: 1.1 Sửa thông tin học kỳ và nhấn Lưu
+    activate UI
+    UI->>Endpoint: 2.1 PUT /api/semesters/{id} (UpdateSemesterRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 UpdateSemesterAsync(id, request)
+        activate Service
+
+        Service->>DB: 3.2 SemesterRepository.GetFirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 Semester entity or null
+        deactivate Database
+        deactivate DB
+
+        alt Semester not found
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            Endpoint-->>UI: 3.5.2 404 Not Found (Semester not found.)
+        else Semester exists
+            alt request.StartDate >= request.EndDate
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Ngày bắt đầu phải trước...")
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Ngày bắt đầu phải trước...)
+            else Date range valid
+                Service->>DB: 3.7 SchoolYearRepository.GetFirstOrDefaultAsync(sy => sy.Id == request.SchoolYearId && !sy.IsDeleted)
+                activate DB
+                DB->>Database: 3.8 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.9 SchoolYear entity or null
+                deactivate Database
+                deactivate DB
+
+                alt SchoolYear not found
+                    Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Không tìm thấy niên khóa.")
+                    Endpoint-->>UI: 3.10.2 400 Bad Request (Không tìm thấy niên khóa.)
+                else SchoolYear valid
+                    alt Semester dates outside SchoolYear dates
+                        Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Thời gian học kỳ phải nằm trong khoảng...")
+                        Endpoint-->>UI: 3.11.2 400 Bad Request (Thời gian học kỳ phải...)
+                    else Semester dates inside SchoolYear
+                        Service->>DB: 3.12 SemesterRepository.HasOverlappingAsync(request.SchoolYearId, request.StartDate, request.EndDate, excludeId: id)
+                        activate DB
+                        DB->>Database: 3.13 Execute semester overlap check query
+                        activate Database
+                        Database-->>DB: 3.14 Overlap result (true/false)
+                        deactivate Database
+                        deactivate DB
+
+                        alt Semester overlapping in same SchoolYear exists
+                            Service-->>Endpoint: 3.15.1 (Succeeded = false, Error = "Thời gian học kỳ bị trùng lặp...")
+                            Endpoint-->>UI: 3.15.2 400 Bad Request (Thời gian học kỳ...)
+                        else Unique Semester dates
+                            Service->>DB: 3.16 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.TeacherId && !u.IsDeleted && u.IsActive)
+                            activate DB
+                            DB->>Database: 3.17 Execute SELECT query
+                            activate Database
+                            Database-->>DB: 3.18 User entity or null
+                            deactivate Database
+                            deactivate DB
+
+                            alt Teacher not found/inactive
+                                Service-->>Endpoint: 3.19.1 (Succeeded = false, Error = "Không tìm thấy giáo viên phụ trách...")
+                                Endpoint-->>UI: 3.19.2 400 Bad Request (Không tìm thấy giáo viên...)
+                            else Teacher valid
+                                note over Service: Update Semester fields
+                                
+                                Service->>DB: 3.20 SaveChangesAsync()
+                                activate DB
+                                DB->>Database: 3.21 Execute UPDATE query
+                                activate Database
+                                Database-->>DB: 3.22 Rows affected
+                                deactivate Database
+                                deactivate DB
+
+                                Service->>DB: 3.23 SemesterRepository.GetFirstOrDefaultAsync(s => s.Id == id, includeProperties: "SchoolYear,Teacher,Classrooms")
+                                activate DB
+                                DB->>Database: 3.24 Execute SELECT query
+                                activate Database
+                                Database-->>DB: 3.25 Updated Semester entity details
+                                deactivate Database
+                                deactivate DB
+
+                                Service-->>Endpoint: 3.26 (Succeeded = true, SemesterResponse)
+                                deactivate Service
+                                Endpoint-->>UI: 3.27 200 OK (SemesterResponse)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

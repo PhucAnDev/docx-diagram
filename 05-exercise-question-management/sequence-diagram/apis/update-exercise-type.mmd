@@ -1,0 +1,68 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title PUT /api/exercise-types/{id}
+    actor Admin as Admin
+    participant UI as UpdateExerciseTypeUI
+    participant Endpoint as :ExerciseTypesController
+    participant Service as :ExerciseTypeService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Admin->>UI: 1.1 Chỉnh sửa thông tin loại bài tập và nhấn Lưu
+    activate UI
+    UI->>Endpoint: 2.1 PUT /api/exercise-types/{id} (UpdateExerciseTypeRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 UpdateAsync(id, request)
+        activate Service
+
+        Service->>DB: 3.2 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted, includeProperties: "Exercises")
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 ExerciseType entity or null
+        deactivate Database
+        deactivate DB
+
+        alt ExerciseType not found
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            Endpoint-->>UI: 3.5.2 404 Not Found (ExerciseType not found.)
+        else ExerciseType exists
+            alt Request deactivates and has active exercises (BR-62)
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không thể ngưng hoạt động loại bài tập đang có chứa các bài tập đang hoạt động.")
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Không thể ngưng hoạt động...)
+            else Status change valid
+                Service->>DB: 3.7 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.TypeName == request.TypeName.Trim() && !t.IsDeleted && t.Id != id, tracked: false)
+                activate DB
+                DB->>Database: 3.8 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.9 Duplicate check result
+                deactivate Database
+                deactivate DB
+
+                alt Name duplicate exists
+                    Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Tên loại bài tập đã tồn tại.")
+                    Endpoint-->>UI: 3.10.2 400 Bad Request (Tên loại bài tập đã tồn tại.)
+                else Name unique
+                    note over Service: Update ExerciseType fields<br/>entity.UpdatedAt = DateTime.UtcNow
+                    
+                    Service->>DB: 3.11 SaveChangesAsync()
+                    activate DB
+                    DB->>Database: 3.12 Execute UPDATE query
+                    activate Database
+                    Database-->>DB: 3.13 Rows affected
+                    deactivate Database
+                    deactivate DB
+
+                    Service-->>Endpoint: 3.14 (Succeeded = true, ExerciseTypeResponse)
+                    deactivate Service
+                    Endpoint-->>UI: 3.15 200 OK (ExerciseTypeResponse)
+                end
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

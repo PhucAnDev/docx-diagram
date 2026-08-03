@@ -1,0 +1,71 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class EnrollmentsController {
+        -enrollmentService: IEnrollmentService
+        +Approve(id: int) Task~ActionResult~
+        -GetRequesterId() int
+        -GetRequesterRole() string
+    }
+
+    class IEnrollmentService {
+        <<interface>>
+        +ApproveEnrollmentAsync(id: int, requesterId: int, requesterRole: string) Task~Tuple~bool,bool,IEnumerable~string~,EnrollmentResponse~~~~
+    }
+
+    class EnrollmentService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +ApproveEnrollmentAsync(id: int, requesterId: int, requesterRole: string) Task~Tuple~bool,bool,IEnumerable~string~,EnrollmentResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +EnrollmentRepository: IEnrollmentRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +EnrollmentRepository: IEnrollmentRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class EnrollmentResponse {
+        +Id: int
+        +ChildId: int
+        +ClassId: int
+        +EnrollmentDate: DateTime
+        +Status: string
+    }
+
+    class Enrollment {
+        +ChildId: int
+        +ClassId: int
+        +EnrollmentDate: DateTime
+        +Status: string
+    }
+
+    class ChildProfile {
+        +FullName: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+        +Status: string
+    }
+
+    class Classroom {
+        +ClassName: string
+        +Status: string
+        +UserId: int
+    }
+
+    EnrollmentsController ..> IEnrollmentService : uses
+    IEnrollmentService <.. EnrollmentService : implements
+    EnrollmentService ..> IUnitOfWork : uses
+    EnrollmentService ..> EnrollmentResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Enrollment : uses
+    Enrollment ..> Classroom : uses
+    Enrollment ..> ChildProfile : uses

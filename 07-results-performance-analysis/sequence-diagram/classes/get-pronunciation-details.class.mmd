@@ -1,0 +1,58 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class PronunciationDetailsController {
+        -uow: IUnitOfWork
+        -mapper: IMapper
+        +GetByResult(resultId: int) Task~IActionResult~
+        +GetById(id: int) Task~IActionResult~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ResultRepository: IResultRepository
+        +ChildProfileRepository: IChildProfileRepository
+        +EnrollmentRepository: IEnrollmentRepository
+        +PronunciationDetailRepository: IPronunciationDetailRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ResultRepository: IResultRepository
+        +ChildProfileRepository: IChildProfileRepository
+        +EnrollmentRepository: IEnrollmentRepository
+        +PronunciationDetailRepository: IPronunciationDetailRepository
+    }
+
+    class PronunciationDetailResponse {
+        +Id: int
+        +ResultId: int
+        +ExpectedPhoneme: string
+        +ActualPhoneme: string
+        +AccuracyScore: int
+        +IssueType: string
+        +ReplayDataUrl: string
+    }
+
+    class PronunciationDetail {
+        +ResultId: int
+        +ExpectedPhoneme: string
+        +ActualPhoneme: string
+        +AccuracyScore: int
+        +IssueType: string
+        +ReplayDataUrl: string
+    }
+
+    class Result {
+        +ChildId: int
+        +ExerciseId: int
+        +IsFinalized: bool
+    }
+
+    PronunciationDetailsController ..> IUnitOfWork : uses
+    PronunciationDetailsController ..> PronunciationDetailResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> PronunciationDetail : uses
+    UnitOfWork ..> Result : uses
+    Result ..> PronunciationDetail : one-to-many

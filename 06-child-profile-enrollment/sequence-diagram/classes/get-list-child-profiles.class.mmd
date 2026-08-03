@@ -1,0 +1,67 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ChildProfilesController {
+        -childProfileService: IChildProfileService
+        +GetList(pageNumber: int, pageSize: int) Task~ActionResult~
+    }
+
+    class IChildProfileService {
+        <<interface>>
+        +GetListChildProfileAsync(pageNumber: int, pageSize: int) Task~PagedResponse~ChildProfileResponse~~
+    }
+
+    class ChildProfileService {
+        -unitOfWork: IUnitOfWork
+        +GetListChildProfileAsync(pageNumber: int, pageSize: int) Task~PagedResponse~ChildProfileResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ChildProfileRepository: IChildProfileRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ChildProfileRepository: IChildProfileRepository
+    }
+
+    class ChildProfileResponse {
+        +Id: int
+        +UserId: int
+        +FullName: string
+        +Avatar: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+        +Status: string
+        +Note: string
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class ChildProfile {
+        +UserId: int
+        +FullName: string
+        +Avatar: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+        +Status: string
+        +Note: string
+    }
+
+    ChildProfilesController ..> IChildProfileService : uses
+    IChildProfileService <.. ChildProfileService : implements
+    ChildProfileService ..> IUnitOfWork : uses
+    ChildProfileService ..> PagedResponse~ChildProfileResponse~ : uses
+    PagedResponse~ChildProfileResponse~ ..> ChildProfileResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ChildProfile : uses

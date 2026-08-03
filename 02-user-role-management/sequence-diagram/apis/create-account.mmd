@@ -1,0 +1,81 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/Users/create-account
+    actor Admin as Admin
+    participant UI as CreateAccountUI
+    participant Endpoint as :UsersController
+    participant Service as :UserService
+    participant Mail as :SmtpEmailService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Admin->>UI: 1.1 Điền thông tin họ tên, email, vai trò (Teacher/Parent) và tạo tài khoản
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/Users/create-account (CreateAccountRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateAccountAsync(request)
+        activate Service
+
+        Service->>DB: 3.2 UserRepository.ExistsAsync(u => u.Email == request.Email && !u.IsDeleted)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT count query
+        activate Database
+        Database-->>DB: 3.4 Email exists boolean
+        deactivate Database
+        deactivate DB
+
+        alt Email exists
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Email ... đã tồn tại.")
+            Endpoint-->>UI: 3.5.2 400 Bad Request (Email ... đã tồn tại.)
+        else Email is unique
+            Service->>DB: 3.6 RoleRepository.GetFirstOrDefaultAsync(r => r.RoleName == request.RoleName && r.IsActive)
+            activate DB
+            DB->>Database: 3.7 Execute SELECT query
+            activate Database
+            Database-->>DB: 3.8 Role entity or null
+            deactivate Database
+            deactivate DB
+
+            alt Role not found or inactive
+                Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Role ... không tồn tại...")
+                Endpoint-->>UI: 3.9.2 400 Bad Request (Role ... không tồn tại...)
+            else Role is active
+                note over Service: Generate temporaryPassword & verifyToken<br/>Hash temporaryPassword using BCrypt
+                
+                Service->>DB: 3.10 UserRepository.AddAsync(user)
+                activate DB
+                DB-->>Service: 3.11 Success
+                deactivate DB
+
+                Service->>DB: 3.12 SaveChangesAsync()
+                activate DB
+                DB->>Database: 3.13 Execute INSERT query
+                activate Database
+                Database-->>DB: 3.14 Rows affected
+                deactivate Database
+                deactivate DB
+
+                note over Service: Build verifyLink using token and config FrontendBaseUrl
+                
+                Service->>Mail: 3.15 SendEmailAsync(email, subject, body)
+                activate Mail
+                Mail-->>Service: 3.16 Success
+                deactivate Mail
+
+                alt Send email fails
+                    Service-->>Endpoint: 3.17.1 (Succeeded = false, Error = "Gửi email thất bại...")
+                    Endpoint-->>UI: 3.17.2 400 Bad Request (Gửi email thất bại...)
+                else Send email success
+                    Service-->>Endpoint: 3.18.1 (Succeeded = true, CreateAccountResponse)
+                    deactivate Service
+                    Endpoint-->>UI: 3.18.2 200 OK (CreateAccountResponse)
+                end
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

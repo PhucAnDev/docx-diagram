@@ -1,0 +1,82 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class LessonsController {
+        -lessonService: ILessonService
+        +Create(request: CreateLessonRequest) Task~ActionResult~
+    }
+
+    class CreateLessonRequest {
+        +ProgramId: int
+        +LessonName: string
+        +LessonOrder: int
+        +Description: string
+        +TargetSkill: string
+        +EstimatedDuration: int
+        +Status: string
+        +MaxScore: float
+    }
+
+    class ILessonService {
+        <<interface>>
+        +CreateLessonAsync(request: CreateLessonRequest) Task~Tuple~bool,IEnumerable~string~,LessonResponse~~~~
+    }
+
+    class LessonService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +CreateLessonAsync(request: CreateLessonRequest) Task~Tuple~bool,IEnumerable~string~,LessonResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +LessonRepository: ILessonRepository
+        +ProgramRepository: IProgramRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +LessonRepository: ILessonRepository
+        +ProgramRepository: IProgramRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class LessonResponse {
+        +Id: int
+        +ProgramId: int
+        +LessonName: string
+        +LessonOrder: int
+        +Description: string
+        +TargetSkill: string
+        +EstimatedDuration: int
+        +Status: string
+        +MaxScore: float
+    }
+
+    class Lesson {
+        +ProgramId: int
+        +LessonName: string
+        +LessonOrder: int
+        +Description: string
+        +TargetSkill: string
+        +EstimatedDuration: int
+        +Status: string
+        +MaxScore: float
+    }
+
+    class Program {
+        +ProgramName: string
+        +IsDeleted: bool
+    }
+
+    LessonsController ..> CreateLessonRequest : uses
+    LessonsController ..> ILessonService : uses
+    ILessonService <.. LessonService : implements
+    LessonService ..> IUnitOfWork : uses
+    LessonService ..> LessonResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Lesson : uses
+    UnitOfWork ..> Program : uses
+    Lesson ..> Program : uses

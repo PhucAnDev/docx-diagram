@@ -1,0 +1,39 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title GET /api/report
+    actor User as User (Admin/Teacher/Parent)
+    participant UI as ReportsUI
+    participant Endpoint as :ReportController
+    participant Service as :ReportService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Yêu cầu danh sách báo cáo học tập
+    activate UI
+    UI->>Endpoint: 2.1 GET /api/report (pageNumber, pageSize)
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 GetListReportAsync(pageNumber, pageSize, userId, role)
+    activate Service
+
+    Service->>DB: 3.2 ReportRepository.GetPagedAsync(...)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT with user, child, classroom, results details
+    activate Database
+    Database-->>DB: 3.4 List of Report entities
+    deactivate Database
+    deactivate DB
+
+    alt Role is Admin
+        note over Service: Filter none (return all reports)
+    else Role is Teacher
+        note over Service: Filter reports where child enrollment classroom belongs to teacher:<br/>r.Analyze.Child.Enrollments.Any(e => !e.IsDeleted && e.Classroom.UserId == userId)
+    else Role is Parent/Other
+        note over Service: Filter reports where child profile belongs to parent:<br/>r.Analyze.Child.UserId == userId
+    end
+
+    Service-->>Endpoint: 3.5 PagedResponse of ReportResponse
+    deactivate Service
+    Endpoint-->>UI: 3.6 200 OK (PagedResponse of ReportResponse)
+    deactivate Endpoint
+    deactivate UI

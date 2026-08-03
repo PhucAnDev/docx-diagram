@@ -1,0 +1,50 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ClassroomsController {
+        -classroomService: IClassroomService
+        +Delete(id: int) Task~ActionResult~
+    }
+
+    class IClassroomService {
+        <<interface>>
+        +DeleteClassroomAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class ClassroomService {
+        -unitOfWork: IUnitOfWork
+        +DeleteClassroomAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ClassroomRepository: IClassroomRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ClassroomRepository: IClassroomRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class Classroom {
+        +Status: string
+        +IsDeleted: bool
+        +DeletedAt: DateTime?
+        +UpdatedAt: DateTime
+        +Enrollments: ICollection~Enrollment~
+    }
+
+    class Enrollment {
+        +Status: string
+        +IsDeleted: bool
+    }
+
+    ClassroomsController ..> IClassroomService : uses
+    IClassroomService <.. ClassroomService : implements
+    ClassroomService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Classroom : uses
+    Classroom ..> Enrollment : uses

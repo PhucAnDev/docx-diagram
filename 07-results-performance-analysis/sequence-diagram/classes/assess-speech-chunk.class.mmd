@@ -1,0 +1,35 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class FilesController {
+        -storage: IStorageService
+        -configuration: IConfiguration
+        +AssessChunk(request: AssessChunkRequest, ct: CancellationToken) Task~IActionResult~
+    }
+
+    class AssessChunkRequest {
+        +ChildProfileId: int
+        +SessionId: string
+        +ChunkIndex: int
+        +ReferenceText: string
+    }
+
+    class IStorageService {
+        <<interface>>
+        +DownloadAsync(objectName: string, destination: Stream, ct: CancellationToken) Task
+    }
+
+    class MinIOService {
+        -minioClient: IMinioClient
+        +DownloadAsync(objectName: string, destination: Stream, ct: CancellationToken) Task
+    }
+
+    class HttpClient {
+        +PostAsync(requestUri: string, content: HttpContent, ct: CancellationToken) Task~HttpResponseMessage~
+    }
+
+    FilesController ..> AssessChunkRequest : uses
+    FilesController ..> IStorageService : uses
+    IStorageService <.. MinIOService : implements
+    FilesController ..> HttpClient : uses

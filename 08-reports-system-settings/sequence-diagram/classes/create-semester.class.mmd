@@ -1,0 +1,95 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class SemestersController {
+        -semesterService: ISesterService
+        +Create(request: CreateSemesterRequest) Task~IActionResult~
+    }
+
+    class CreateSemesterRequest {
+        +SemesterName: string
+        +SchoolYearId: int
+        +TeacherId: int
+        +ClassCount: int
+        +Description: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+    }
+
+    class ISesterService {
+        <<interface>>
+        +CreateSemesterAsync(request: CreateSemesterRequest) Task~Tuple~bool,IEnumerable~string~,SemesterResponse~~~~
+    }
+
+    class SemesterService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +CreateSemesterAsync(request: CreateSemesterRequest) Task~Tuple~bool,IEnumerable~string~,SemesterResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +SemesterRepository: ISemesterRepository
+        +SchoolYearRepository: ISchoolYearRepository
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ISemesterRepository {
+        <<interface>>
+        +HasOverlappingAsync(schoolYearId: int, start: DateTime, end: DateTime, excludeId: int?) Task~bool~
+    }
+
+    class SemesterRepository {
+        +HasOverlappingAsync(schoolYearId: int, start: DateTime, end: DateTime, excludeId: int?) Task~bool~
+    }
+
+    class SemesterResponse {
+        +Id: int
+        +SemesterName: string
+        +SchoolYearId: int
+        +TeacherId: int
+        +TeacherName: string
+        +ClassCount: int
+        +Description: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+    }
+
+    class Semester {
+        +SemesterName: string
+        +SchoolYearId: int
+        +TeacherId: int
+        +ClassCount: int
+        +Description: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+    }
+
+    class SchoolYear {
+        +YearName: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+    }
+
+    class User {
+        +FullName: string
+        +IsActive: bool
+    }
+
+    SemestersController ..> CreateSemesterRequest : uses
+    SemestersController ..> ISesterService : uses
+    ISesterService <.. SemesterService : implements
+    SemesterService ..> IUnitOfWork : uses
+    SemesterService ..> SemesterResponse : uses
+    IUnitOfWork ..> ISemesterRepository : exposes
+    ISemesterRepository <.. SemesterRepository : implements
+    UnitOfWork ..> Semester : uses
+    UnitOfWork ..> SchoolYear : uses
+    UnitOfWork ..> User : uses
+    Semester ..> SchoolYear : belongs to
+    Semester ..> User : head teacher

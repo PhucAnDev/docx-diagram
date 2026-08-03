@@ -1,0 +1,92 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ExerciseQuestionsController {
+        -questionService: IExerciseQuestionService
+        +Create(request: CreateExerciseQuestionRequest) Task~ActionResult~
+    }
+
+    class CreateExerciseQuestionRequest {
+        +ExerciseId: int
+        +TeacherId: int
+        +Instruction: string
+        +QuestionSentence: string
+        +AnswerSentence: string
+        +InputType: string
+        +AudioURL: string
+        +ImageURL: string
+    }
+
+    class IExerciseQuestionService {
+        <<interface>>
+        +CreateAsync(request: CreateExerciseQuestionRequest) Task~Tuple~bool,IEnumerable~string~,ExerciseQuestionResponse~~~~
+    }
+
+    class ExerciseQuestionService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +CreateAsync(request: CreateExerciseQuestionRequest) Task~Tuple~bool,IEnumerable~string~,ExerciseQuestionResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExerciseQuestionRepository: IExerciseQuestionRepository
+        +UserRepository: IUserRepository
+        +ExerciseRepository: IExerciseRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ExerciseQuestionRepository: IExerciseQuestionRepository
+        +UserRepository: IUserRepository
+        +ExerciseRepository: IExerciseRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ExerciseQuestionResponse {
+        +Id: int
+        +ExerciseId: int
+        +TeacherId: int
+        +Instruction: string
+        +QuestionSentence: string
+        +AnswerSentence: string
+        +InputType: string
+        +AudioURL: string
+        +ImageURL: string
+    }
+
+    class ExerciseQuestion {
+        +ExerciseId: int
+        +TeacherId: int
+        +Instruction: string
+        +QuestionSentence: string
+        +AnswerSentence: string
+        +InputType: string
+        +AudioURL: string
+        +ImageURL: string
+    }
+
+    class Exercise {
+        +ExerciseName: string
+        +IsDeleted: bool
+    }
+
+    class User {
+        +FullName: string
+        +IsDeleted: bool
+        +IsActive: bool
+    }
+
+    ExerciseQuestionsController ..> CreateExerciseQuestionRequest : uses
+    ExerciseQuestionsController ..> IExerciseQuestionService : uses
+    IExerciseQuestionService <.. ExerciseQuestionService : implements
+    ExerciseQuestionService ..> IUnitOfWork : uses
+    ExerciseQuestionService ..> ExerciseQuestionResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ExerciseQuestion : uses
+    UnitOfWork ..> Exercise : uses
+    UnitOfWork ..> User : uses
+    ExerciseQuestion ..> Exercise : uses
+    ExerciseQuestion ..> User : uses

@@ -1,0 +1,88 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ClassroomsController {
+        -classroomService: IClassroomService
+        +GetClassroomsByTeacherId(teacherId: int, pageNumber: int, pageSize: int) Task~ActionResult~
+    }
+
+    class IClassroomService {
+        <<interface>>
+        +GetClassroomsByTeacherIdAsync(teacherId: int, pageNumber: int, pageSize: int) Task~PagedResponse~ClassroomResponse~~
+    }
+
+    class ClassroomService {
+        -unitOfWork: IUnitOfWork
+        +GetClassroomsByTeacherIdAsync(teacherId: int, pageNumber: int, pageSize: int) Task~PagedResponse~ClassroomResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ClassroomRepository: IClassroomRepository
+        +UserRepository: IUserRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ClassroomRepository: IClassroomRepository
+        +UserRepository: IUserRepository
+    }
+
+    class ClassroomResponse {
+        +Id: int
+        +ClassName: string
+        +Description: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+        +TeacherName: string
+        +ProgramName: string
+        +SemesterName: string
+        +EnrollmentsCount: int
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class Classroom {
+        +ClassName: string
+        +Description: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+        +UserId: int
+        +ProgramId: int
+        +SemesterId: int
+    }
+
+    class User {
+        +FullName: string
+        +IsDeleted: bool
+        +IsActive: bool
+    }
+
+    class Program {
+        +ProgramName: string
+    }
+
+    class Semester {
+        +SemesterName: string
+    }
+
+    ClassroomsController ..> IClassroomService : uses
+    IClassroomService <.. ClassroomService : implements
+    ClassroomService ..> IUnitOfWork : uses
+    ClassroomService ..> PagedResponse~ClassroomResponse~ : uses
+    PagedResponse~ClassroomResponse~ ..> ClassroomResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Classroom : uses
+    UnitOfWork ..> User : uses
+    Classroom ..> User : uses
+    Classroom ..> Program : uses
+    Classroom ..> Semester : uses

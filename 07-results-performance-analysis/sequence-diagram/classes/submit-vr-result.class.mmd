@@ -1,0 +1,115 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ResultsController {
+        -resultService: IResultService
+        +Submit(request: SubmitResultRequest) Task~IActionResult~
+    }
+
+    class SubmitResultRequest {
+        +SessionId: string
+        +ChildId: int
+        +ExerciseId: int?
+        +LessonId: int?
+        +CompletionStatus: string
+        +Score: float
+        +ErrorCount: int
+        +CorrectCount: int
+        +StartedAt: DateTime
+        +CompletedAt: DateTime?
+        +DurationSeconds: int
+        +InteractionLog: string
+        +FeedbackText: string
+    }
+
+    class IResultService {
+        <<interface>>
+        +SubmitAsync(request: SubmitResultRequest) Task~Tuple~bool,bool,IEnumerable~string~,ResultResponse~~~~
+    }
+
+    class ResultService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +SubmitAsync(request: SubmitResultRequest) Task~Tuple~bool,bool,IEnumerable~string~,ResultResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ResultRepository: IResultRepository
+        +ChildProfileRepository: IChildProfileRepository
+        +ExerciseRepository: IExerciseRepository
+        +LessonRepository: ILessonRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ResultRepository: IResultRepository
+        +ChildProfileRepository: IChildProfileRepository
+        +ExerciseRepository: IExerciseRepository
+        +LessonRepository: ILessonRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ResultResponse {
+        +Id: int
+        +SessionId: string
+        +ChildId: int
+        +ExerciseId: int?
+        +LessonId: int?
+        +AttemptNumber: int
+        +CompletionStatus: string
+        +Score: float
+        +StartedAt: DateTime
+        +CompletedAt: DateTime?
+        +DurationSeconds: int
+        +IsFinalized: bool
+    }
+
+    class Result {
+        +SessionId: string
+        +ChildId: int
+        +ExerciseId: int?
+        +LessonId: int?
+        +AttemptNumber: int
+        +CompletionStatus: string
+        +Score: float
+        +ErrorCount: int
+        +CorrectCount: int
+        +StartedAt: DateTime
+        +CompletedAt: DateTime?
+        +DurationSeconds: int
+        +InteractionLog: string
+        +FeedbackText: string
+        +IsFinalized: bool
+    }
+
+    class ChildProfile {
+        +FullName: string
+        +Status: string
+    }
+
+    class Exercise {
+        +ExerciseName: string
+        +Status: string
+    }
+
+    class Lesson {
+        +Title: string
+        +Status: string
+    }
+
+    ResultsController ..> SubmitResultRequest : uses
+    ResultsController ..> IResultService : uses
+    IResultService <.. ResultService : implements
+    ResultService ..> IUnitOfWork : uses
+    ResultService ..> ResultResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Result : uses
+    UnitOfWork ..> ChildProfile : uses
+    UnitOfWork ..> Exercise : uses
+    UnitOfWork ..> Lesson : uses
+    Result ..> ChildProfile : uses
+    Result ..> Exercise : uses
+    Result ..> Lesson : uses

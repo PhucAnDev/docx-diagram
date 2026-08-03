@@ -1,0 +1,73 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class UsersController {
+        -userService: IUserService
+        +GetList(pageNumber: int, pageSize: int) Task~ActionResult~
+    }
+
+    class IUserService {
+        <<interface>>
+        +GetListUserAsync(pageNumber: int, pageSize: int) Task~PagedResponse~UserResponse~~
+    }
+
+    class UserService {
+        -unitOfWork: IUnitOfWork
+        +GetListUserAsync(pageNumber: int, pageSize: int) Task~PagedResponse~UserResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +UserRepository: IUserRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +UserRepository: IUserRepository
+    }
+
+    class UserResponse {
+        +Avatar: string
+        +Id: int
+        +FullName: string
+        +Email: string
+        +Phone: string
+        +Gender: string
+        +Specialty: string
+        +RoleName: string
+        +IsActive: bool
+        +CreatedAt: DateTime
+        +UpdatedAt: DateTime
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class User {
+        +Avatar: string
+        +FullName: string
+        +Email: string
+        +Phone: string
+        +IsActive: bool
+        +IsDeleted: bool
+        +RoleId: int
+    }
+
+    class Role {
+        +RoleName: UserRole
+    }
+
+    UsersController ..> IUserService : uses
+    IUserService <.. UserService : implements
+    UserService ..> IUnitOfWork : uses
+    UserService ..> PagedResponse~UserResponse~ : uses
+    PagedResponse~UserResponse~ ..> UserResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> User : uses
+    User ..> Role : uses

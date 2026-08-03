@@ -1,0 +1,82 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ReportController {
+        -reportService: IReportService
+        +Get(query: PaginationQuery) Task~ActionResult~
+    }
+
+    class IReportService {
+        <<interface>>
+        +GetListReportAsync(pageNumber: int, pageSize: int, userId: int, role: string) Task~PagedResponse~ReportResponse~~
+    }
+
+    class ReportService {
+        -unitOfWork: IUnitOfWork
+        +GetListReportAsync(pageNumber: int, pageSize: int, userId: int, role: string) Task~PagedResponse~ReportResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ReportRepository: IReportRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ReportRepository: IReportRepository
+    }
+
+    class ReportResponse {
+        +Id: int
+        +AnalyzeId: int
+        +GeneratedBy: int
+        +GeneratedByName: string
+        +ReportFormat: string
+        +FileUrl: string
+        +GeneratedAt: DateTime
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class Report {
+        +AnalyzeId: int
+        +GeneratedBy: int
+        +ReportFormat: string
+        +FileUrl: string
+    }
+
+    class Analyze {
+        +ChildId: int
+    }
+
+    class ChildProfile {
+        +UserId: int
+    }
+
+    class Enrollment {
+        +ClassId: int
+        +IsDeleted: bool
+    }
+
+    class Classroom {
+        +UserId: int
+    }
+
+    ReportController ..> IReportService : uses
+    IReportService <.. ReportService : implements
+    ReportService ..> IUnitOfWork : uses
+    ReportService ..> PagedResponse~ReportResponse~ : uses
+    PagedResponse~ReportResponse~ ..> ReportResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Report : uses
+    Report ..> Analyze : belongs to
+    Analyze ..> ChildProfile : belongs to
+    ChildProfile ..> Enrollment : one-to-many
+    Enrollment ..> Classroom : belongs to

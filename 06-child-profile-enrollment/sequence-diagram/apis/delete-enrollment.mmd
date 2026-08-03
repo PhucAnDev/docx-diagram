@@ -1,0 +1,47 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title DELETE /api/enrollments/{id}
+    actor User as User (Admin)
+    participant UI as DeleteEnrollmentUI
+    participant Endpoint as :EnrollmentsController
+    participant Service as :EnrollmentService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Yêu cầu xóa ghi danh xếp lớp
+    activate UI
+    UI->>Endpoint: 2.1 DELETE /api/enrollments/{id}
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 DeleteEnrollmentAsync(id)
+    activate Service
+
+    Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 Enrollment entity or null
+    deactivate Database
+    deactivate DB
+
+    alt Enrollment not found
+        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+        Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
+    else Enrollment exists
+        note over Service: entity.IsDeleted = true<br/>entity.UpdatedAt = DateTime.UtcNow
+        
+        Service->>DB: 3.6 EnrollmentRepository.Update(entity)
+        Service->>DB: 3.7 SaveChangesAsync()
+        activate DB
+        DB->>Database: 3.8 Execute UPDATE query
+        activate Database
+        Database-->>DB: 3.9 Rows affected
+        deactivate Database
+        deactivate DB
+
+        Service-->>Endpoint: 3.10 (Succeeded = true)
+        deactivate Service
+        Endpoint-->>UI: 3.11 200 OK (Enrollment deleted successfully.)
+    end
+    deactivate Endpoint
+    deactivate UI

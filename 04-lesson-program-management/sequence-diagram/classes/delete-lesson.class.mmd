@@ -1,0 +1,42 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class LessonsController {
+        -lessonService: ILessonService
+        +Delete(id: int) Task~ActionResult~
+    }
+
+    class ILessonService {
+        <<interface>>
+        +DeleteLessonAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class LessonService {
+        -unitOfWork: IUnitOfWork
+        +DeleteLessonAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +LessonRepository: ILessonRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +LessonRepository: ILessonRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class Lesson {
+        +IsDeleted: bool
+        +DeletedAt: DateTime?
+        +UpdatedAt: DateTime
+    }
+
+    LessonsController ..> ILessonService : uses
+    ILessonService <.. LessonService : implements
+    LessonService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Lesson : uses

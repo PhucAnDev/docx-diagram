@@ -1,0 +1,84 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ExercisesController {
+        -exerciseService: IExerciseService
+        +GetById(id: int) Task~ActionResult~
+    }
+
+    class IExerciseService {
+        <<interface>>
+        +GetByIdAsync(id: int) Task~ExerciseResponse~
+    }
+
+    class ExerciseService {
+        -unitOfWork: IUnitOfWork
+        +GetByIdAsync(id: int) Task~ExerciseResponse~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExerciseRepository: IExerciseRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ExerciseRepository: IExerciseRepository
+    }
+
+    class ExerciseResponse {
+        +Id: int
+        +ExerciseName: string
+        +Instruction: string
+        +DifficultyLevel: string
+        +TargetSkill: string
+        +Language: string
+        +DurationLimit: int
+        +Status: string
+        +TeacherName: string
+        +LessonName: string
+        +ProgramName: string
+        +TypeName: string
+        +Questions: List~ExerciseQuestionResponse~
+    }
+
+    class Exercise {
+        +ExerciseName: string
+        +Instruction: string
+        +DifficultyLevel: string
+        +TargetSkill: string
+        +Language: string
+        +DurationLimit: int
+        +Status: string
+        +TeacherId: int
+        +LessonId: int
+        +TypeId: int
+    }
+
+    class User {
+        +FullName: string
+    }
+
+    class Lesson {
+        +LessonName: string
+    }
+
+    class Program {
+        +ProgramName: string
+    }
+
+    class ExerciseType {
+        +TypeName: string
+    }
+
+    ExercisesController ..> IExerciseService : uses
+    IExerciseService <.. ExerciseService : implements
+    ExerciseService ..> IUnitOfWork : uses
+    ExerciseService ..> ExerciseResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Exercise : uses
+    Exercise ..> User : uses
+    Exercise ..> Lesson : uses
+    Lesson ..> Program : uses
+    Exercise ..> ExerciseType : uses

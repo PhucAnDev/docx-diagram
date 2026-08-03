@@ -1,0 +1,57 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ResultsController {
+        -resultService: IResultService
+        -unitOfWork: IUnitOfWork
+        +UpdateFeedback(id: int, request: UpdateFeedbackRequest) Task~IActionResult~
+    }
+
+    class UpdateFeedbackRequest {
+        +FeedbackText: string
+    }
+
+    class IResultService {
+        <<interface>>
+        +UpdateFeedbackAsync(id: int, feedbackText: string) Task~ApiResponse~ResultResponse~~
+    }
+
+    class ResultService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +UpdateFeedbackAsync(id: int, feedbackText: string) Task~ApiResponse~ResultResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ResultRepository: IResultRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ResultRepository: IResultRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ResultResponse {
+        +Id: int
+        +ChildId: int
+        +ExerciseId: int
+        +FeedbackText: string
+    }
+
+    class Result {
+        +ChildId: int
+        +ExerciseId: int
+        +FeedbackText: string
+    }
+
+    ResultsController ..> UpdateFeedbackRequest : uses
+    ResultsController ..> IResultService : uses
+    IResultService <.. ResultService : implements
+    ResultService ..> IUnitOfWork : uses
+    ResultService ..> ResultResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Result : uses

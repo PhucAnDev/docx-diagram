@@ -1,0 +1,65 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class EnrollmentsController {
+        -enrollmentService: IEnrollmentService
+        +GetEnrollmentsByChildId(childId: int) Task~ActionResult~
+    }
+
+    class IEnrollmentService {
+        <<interface>>
+        +GetEnrollmentsByChildIdAsync(childId: int) Task~IEnumerable~EnrollmentResponse~~
+    }
+
+    class EnrollmentService {
+        -unitOfWork: IUnitOfWork
+        +GetEnrollmentsByChildIdAsync(childId: int) Task~IEnumerable~EnrollmentResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +EnrollmentRepository: IEnrollmentRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +EnrollmentRepository: IEnrollmentRepository
+    }
+
+    class EnrollmentResponse {
+        +Id: int
+        +ChildId: int
+        +ClassId: int
+        +EnrollmentDate: DateTime
+        +Status: string
+        +ChildName: string
+        +ClassName: string
+        +TeacherName: string
+        +ProgramName: string
+        +SemesterName: string
+    }
+
+    class Enrollment {
+        +ChildId: int
+        +ClassId: int
+        +EnrollmentDate: DateTime
+        +Status: string
+    }
+
+    class ChildProfile {
+        +FullName: string
+    }
+
+    class Classroom {
+        +ClassName: string
+    }
+
+    EnrollmentsController ..> IEnrollmentService : uses
+    IEnrollmentService <.. EnrollmentService : implements
+    EnrollmentService ..> IUnitOfWork : uses
+    EnrollmentService ..> EnrollmentResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Enrollment : uses
+    Enrollment ..> ChildProfile : uses
+    Enrollment ..> Classroom : uses

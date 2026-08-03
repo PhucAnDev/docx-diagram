@@ -1,0 +1,58 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ExerciseTypesController {
+        -typeService: IExerciseTypeService
+        +GetList(pageNumber: int, pageSize: int, isActive: bool?) Task~ActionResult~
+    }
+
+    class IExerciseTypeService {
+        <<interface>>
+        +GetListAsync(pageNumber: int, pageSize: int, isActive: bool?) Task~PagedResponse~ExerciseTypeResponse~~
+    }
+
+    class ExerciseTypeService {
+        -unitOfWork: IUnitOfWork
+        +GetListAsync(pageNumber: int, pageSize: int, isActive: bool?) Task~PagedResponse~ExerciseTypeResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExerciseTypeRepository: IExerciseTypeRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ExerciseTypeRepository: IExerciseTypeRepository
+    }
+
+    class ExerciseTypeResponse {
+        +Id: int
+        +TypeName: string
+        +Description: string
+        +IsActive: bool
+        +CreatedAt: DateTime
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class ExerciseType {
+        +TypeName: string
+        +Description: string
+        +IsActive: bool
+    }
+
+    ExerciseTypesController ..> IExerciseTypeService : uses
+    IExerciseTypeService <.. ExerciseTypeService : implements
+    ExerciseTypeService ..> IUnitOfWork : uses
+    ExerciseTypeService ..> PagedResponse~ExerciseTypeResponse~ : uses
+    PagedResponse~ExerciseTypeResponse~ ..> ExerciseTypeResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ExerciseType : uses

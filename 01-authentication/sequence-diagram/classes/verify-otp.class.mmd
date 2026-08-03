@@ -1,0 +1,51 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class AuthController {
+        -authService: IAuthService
+        +VerifyOtp(request: VerifyOtpRequest) Task~ActionResult~
+    }
+
+    class VerifyOtpRequest {
+        +Email: string
+        +Otp: string
+    }
+
+    class IAuthService {
+        <<interface>>
+        +VerifyOtpAsync(email: string, otp: string) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class AuthService {
+        -unitOfWork: IUnitOfWork
+        -cache: IDistributedCache
+        +VerifyOtpAsync(email: string, otp: string) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class IDistributedCache {
+        <<interface>>
+        +GetStringAsync(key: string) Task~string~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +UserRepository: IUserRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +UserRepository: IUserRepository
+    }
+
+    class User {
+        +Email: string
+    }
+
+    AuthController ..> VerifyOtpRequest : uses
+    AuthController ..> IAuthService : uses
+    IAuthService <.. AuthService : implements
+    AuthService ..> IDistributedCache : uses
+    AuthService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> User : uses

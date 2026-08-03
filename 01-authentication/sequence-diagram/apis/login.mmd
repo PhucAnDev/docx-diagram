@@ -1,0 +1,68 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/Auth/login
+    actor User as User (Admin/Teacher/Parent/Child)
+    participant UI as LoginUI
+    participant Endpoint as :AuthController
+    participant Service as :AuthService
+    participant TokenService as :TokenService
+    participant Cache as :DistributedCache
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Nhập email và mật khẩu, nhấn Đăng nhập
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/Auth/login (Email, Password)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request (Validation failed)
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 LoginAsync(request)
+        activate Service
+        
+        Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Email == request.Email, includeProperties: "Role")
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 User entity with Role
+        deactivate Database
+        deactivate DB
+
+        alt User not found (user == null)
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Invalid email or password.")
+            Endpoint-->>UI: 3.5.2 401 Unauthorized (Invalid email or password.)
+        else User found
+            note over Service: BCrypt.Verify(request.Password, user.PasswordHash)
+            alt Password hash mismatch
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Invalid email or password.")
+                Endpoint-->>UI: 3.6.2 401 Unauthorized (Invalid email or password.)
+            else Password matches
+                alt Email not verified (!user.IsEmailVerified)
+                    Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Email chưa được xác minh...")
+                    Endpoint-->>UI: 3.7.2 401 Unauthorized (Email chưa được xác minh...)
+                else Email verified
+                    Service->>TokenService: 3.8 GenerateAccessToken(user)
+                    activate TokenService
+                    TokenService-->>Service: 3.9 AccessToken string
+                    deactivate TokenService
+
+                    Service->>TokenService: 3.10 GenerateRefreshToken()
+                    activate TokenService
+                    TokenService-->>Service: 3.11 RefreshToken string
+                    deactivate TokenService
+
+                    Service->>Cache: 3.12 SetStringAsync("refreshToken:" + user.Email, refreshToken, expireIn7Days)
+                    activate Cache
+                    Cache-->>Service: 3.13 Success
+                    deactivate Cache
+
+                    Service-->>Endpoint: 3.14 (Succeeded = true, TokenModel)
+                    deactivate Service
+                    Endpoint-->>UI: 3.15 200 OK (TokenModel)
+                end
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

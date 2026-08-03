@@ -1,0 +1,53 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ExerciseQuestionsController {
+        -questionService: IExerciseQuestionService
+        +Delete(id: int) Task~ActionResult~
+    }
+
+    class IExerciseQuestionService {
+        <<interface>>
+        +DeleteAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class ExerciseQuestionService {
+        -unitOfWork: IUnitOfWork
+        +DeleteAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExerciseQuestionRepository: IExerciseQuestionRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ExerciseQuestionRepository: IExerciseQuestionRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ExerciseQuestion {
+        +IsDeleted: bool
+        +DeletedAt: DateTime?
+        +UpdatedAt: DateTime
+        +Exercise: Exercise
+    }
+
+    class Exercise {
+        +Results: ICollection~Result~
+    }
+
+    class Result {
+        +Id: int
+    }
+
+    ExerciseQuestionsController ..> IExerciseQuestionService : uses
+    IExerciseQuestionService <.. ExerciseQuestionService : implements
+    ExerciseQuestionService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ExerciseQuestion : uses
+    ExerciseQuestion ..> Exercise : uses
+    Exercise ..> Result : uses

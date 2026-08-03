@@ -1,0 +1,31 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title GET /api/programs
+    actor User as User (Admin/Teacher)
+    participant UI as GetListProgramsUI
+    participant Endpoint as :ProgramsController
+    participant Service as :ProgramService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Yêu cầu hiển thị danh sách chương trình học
+    activate UI
+    UI->>Endpoint: 2.1 GET /api/programs (pageNumber, pageSize)
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 GetListProgramAsync(pageNumber, pageSize)
+    activate Service
+
+    Service->>DB: 3.2 ProgramRepository.GetPagedAsync(pageNumber, pageSize)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query with pagination
+    activate Database
+    Database-->>DB: 3.4 Paged list of Programs
+    deactivate Database
+    deactivate DB
+
+    Service-->>Endpoint: 3.5 PagedResponse of ProgramResponse
+    deactivate Service
+    Endpoint-->>UI: 3.6 200 OK (PagedResponse of ProgramResponse)
+    deactivate Endpoint
+    deactivate UI

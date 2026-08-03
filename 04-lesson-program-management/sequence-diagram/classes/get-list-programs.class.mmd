@@ -1,0 +1,65 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ProgramsController {
+        -programService: IProgramService
+        +GetList(pageNumber: int, pageSize: int) Task~ActionResult~
+    }
+
+    class IProgramService {
+        <<interface>>
+        +GetListProgramAsync(pageNumber: int, pageSize: int) Task~PagedResponse~ProgramResponse~~
+    }
+
+    class ProgramService {
+        -unitOfWork: IUnitOfWork
+        +GetListProgramAsync(pageNumber: int, pageSize: int) Task~PagedResponse~ProgramResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ProgramRepository: IProgramRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ProgramRepository: IProgramRepository
+    }
+
+    class ProgramResponse {
+        +Id: int
+        +ProgramName: string
+        +Description: string
+        +TargetAgeFrom: int
+        +TargetAgeTo: int
+        +Language: string
+        +Status: string
+        +CreatedAt: DateTime
+        +UpdatedAt: DateTime
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class Program {
+        +ProgramName: string
+        +Description: string
+        +TargetAgeFrom: int
+        +TargetAgeTo: int
+        +Language: string
+        +Status: string
+    }
+
+    ProgramsController ..> IProgramService : uses
+    IProgramService <.. ProgramService : implements
+    ProgramService ..> IUnitOfWork : uses
+    ProgramService ..> PagedResponse~ProgramResponse~ : uses
+    PagedResponse~ProgramResponse~ ..> ProgramResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Program : uses

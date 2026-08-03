@@ -1,0 +1,67 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ProgramsController {
+        -programService: IProgramService
+        +Update(id: int, request: UpdateProgramRequest) Task~ActionResult~
+    }
+
+    class UpdateProgramRequest {
+        +ProgramName: string
+        +Description: string
+        +TargetAgeFrom: int
+        +TargetAgeTo: int
+        +Language: string
+        +Status: string
+    }
+
+    class IProgramService {
+        <<interface>>
+        +UpdateProgramAsync(id: int, request: UpdateProgramRequest) Task~Tuple~bool,bool,IEnumerable~string~,ProgramResponse~~~~
+    }
+
+    class ProgramService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +UpdateProgramAsync(id: int, request: UpdateProgramRequest) Task~Tuple~bool,bool,IEnumerable~string~,ProgramResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ProgramRepository: IProgramRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ProgramRepository: IProgramRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ProgramResponse {
+        +Id: int
+        +ProgramName: string
+        +Description: string
+        +TargetAgeFrom: int
+        +TargetAgeTo: int
+        +Language: string
+        +Status: string
+    }
+
+    class Program {
+        +ProgramName: string
+        +Description: string
+        +TargetAgeFrom: int
+        +TargetAgeTo: int
+        +Language: string
+        +Status: string
+    }
+
+    ProgramsController ..> UpdateProgramRequest : uses
+    ProgramsController ..> IProgramService : uses
+    IProgramService <.. ProgramService : implements
+    ProgramService ..> IUnitOfWork : uses
+    ProgramService ..> ProgramResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Program : uses

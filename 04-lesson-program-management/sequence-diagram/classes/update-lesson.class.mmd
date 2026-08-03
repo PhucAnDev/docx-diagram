@@ -1,0 +1,72 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class LessonsController {
+        -lessonService: ILessonService
+        +Update(id: int, request: UpdateLessonRequest) Task~ActionResult~
+    }
+
+    class UpdateLessonRequest {
+        +LessonName: string
+        +LessonOrder: int
+        +Description: string
+        +TargetSkill: string
+        +EstimatedDuration: int
+        +Status: string
+        +MaxScore: float
+    }
+
+    class ILessonService {
+        <<interface>>
+        +UpdateLessonAsync(id: int, request: UpdateLessonRequest) Task~Tuple~bool,bool,IEnumerable~string~,LessonResponse~~~~
+    }
+
+    class LessonService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +UpdateLessonAsync(id: int, request: UpdateLessonRequest) Task~Tuple~bool,bool,IEnumerable~string~,LessonResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +LessonRepository: ILessonRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +LessonRepository: ILessonRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class LessonResponse {
+        +Id: int
+        +ProgramId: int
+        +LessonName: string
+        +LessonOrder: int
+        +Description: string
+        +TargetSkill: string
+        +EstimatedDuration: int
+        +Status: string
+        +MaxScore: float
+    }
+
+    class Lesson {
+        +ProgramId: int
+        +LessonName: string
+        +LessonOrder: int
+        +Description: string
+        +TargetSkill: string
+        +EstimatedDuration: int
+        +Status: string
+        +MaxScore: float
+    }
+
+    LessonsController ..> UpdateLessonRequest : uses
+    LessonsController ..> ILessonService : uses
+    ILessonService <.. LessonService : implements
+    LessonService ..> IUnitOfWork : uses
+    LessonService ..> LessonResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Lesson : uses

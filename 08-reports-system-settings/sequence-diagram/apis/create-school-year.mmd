@@ -1,0 +1,74 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/school-years
+    actor Admin as Admin
+    participant UI as CreateSchoolYearUI
+    participant Endpoint as :SchoolYearsController
+    participant Service as :SchoolYearService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Admin->>UI: 1.1 Nhập thông tin niên khóa mới (tên, ngày bắt đầu/kết thúc, trạng thái)
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/school-years (CreateSchoolYearRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateSchoolYearAsync(request)
+        activate Service
+
+        alt BR-43: request.StartDate >= request.EndDate
+            Service-->>Endpoint: 3.2.1 (Succeeded = false, Error = "Ngày bắt đầu phải trước...")
+            Endpoint-->>UI: 3.2.2 400 Bad Request (Ngày bắt đầu phải trước...)
+        else Date range valid
+            Service->>DB: 3.3 SchoolYearRepository.HasOverlappingAsync(request.StartDate, request.EndDate)
+            activate DB
+            DB->>Database: 3.4 Execute overlap check query
+            activate Database
+            Database-->>DB: 3.5 Overlap result (true/false)
+            deactivate Database
+            deactivate DB
+
+            alt Overlapping school year exists
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Thời gian niên khóa bị trùng lặp...")
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Thời gian niên khóa...)
+            else No overlap
+                alt request.Status == "Active"
+                    Service->>DB: 3.7.1 SchoolYearRepository.HasActiveSchoolYearAsync()
+                    activate DB
+                    DB->>Database: 3.7.2 Execute active check query
+                    activate Database
+                    Database-->>DB: 3.7.3 Active check result (true/false)
+                    deactivate Database
+                    deactivate DB
+
+                    alt Already has Active school year
+                        Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Đã có một niên khóa khác đang ở trạng thái Hoạt động.")
+                        Endpoint-->>UI: 3.8.2 400 Bad Request (Đã có một niên khóa...)
+                    else Unique Active or non-Active status
+                        note over Service: Create SchoolYear entity
+                    end
+                else Status not Active
+                    note over Service: Create SchoolYear entity
+                end
+
+                note over Service: Save to database
+                Service->>DB: 3.9 SchoolYearRepository.AddAsync(schoolYear)
+                Service->>DB: 3.10 SaveChangesAsync()
+                activate DB
+                DB->>Database: 3.11 Execute INSERT query
+                activate Database
+                Database-->>DB: 3.12 Rows affected
+                deactivate Database
+                deactivate DB
+
+                Service-->>Endpoint: 3.13 (Succeeded = true, SchoolYearResponse)
+                deactivate Service
+                Endpoint-->>UI: 3.14 200 OK (SchoolYearResponse)
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

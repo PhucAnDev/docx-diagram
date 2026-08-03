@@ -1,0 +1,51 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class RolesController {
+        -roleService: IRoleService
+        +GetById(id: int) Task~ActionResult~
+    }
+
+    class IRoleService {
+        <<interface>>
+        +GetRoleByIdAsync(id: int) Task~RoleResponse~
+    }
+
+    class RoleService {
+        -unitOfWork: IUnitOfWork
+        +GetRoleByIdAsync(id: int) Task~RoleResponse~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +RoleRepository: IRoleRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +RoleRepository: IRoleRepository
+    }
+
+    class RoleResponse {
+        +Id: int
+        +RoleName: string
+        +Description: string
+        +IsActive: bool
+        +CreatedAt: DateTime
+        +UpdatedAt: DateTime
+    }
+
+    class Role {
+        +RoleName: UserRole
+        +Description: string
+        +IsActive: bool
+        +IsDeleted: bool
+    }
+
+    RolesController ..> IRoleService : uses
+    IRoleService <.. RoleService : implements
+    RoleService ..> IUnitOfWork : uses
+    RoleService ..> RoleResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Role : uses

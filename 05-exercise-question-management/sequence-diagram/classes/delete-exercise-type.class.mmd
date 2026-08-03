@@ -1,0 +1,48 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ExerciseTypesController {
+        -typeService: IExerciseTypeService
+        +Delete(id: int) Task~ActionResult~
+    }
+
+    class IExerciseTypeService {
+        <<interface>>
+        +DeleteAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class ExerciseTypeService {
+        -unitOfWork: IUnitOfWork
+        +DeleteAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExerciseTypeRepository: IExerciseTypeRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ExerciseTypeRepository: IExerciseTypeRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ExerciseType {
+        +IsDeleted: bool
+        +DeletedAt: DateTime?
+        +UpdatedAt: DateTime
+        +Exercises: ICollection~Exercise~
+    }
+
+    class Exercise {
+        +IsDeleted: bool
+    }
+
+    ExerciseTypesController ..> IExerciseTypeService : uses
+    IExerciseTypeService <.. ExerciseTypeService : implements
+    ExerciseTypeService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ExerciseType : uses
+    ExerciseType ..> Exercise : uses

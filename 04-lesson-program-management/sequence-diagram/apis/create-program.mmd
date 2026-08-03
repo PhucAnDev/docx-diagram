@@ -1,0 +1,42 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/programs
+    actor Admin as Admin
+    participant UI as CreateProgramUI
+    participant Endpoint as :ProgramsController
+    participant Service as :ProgramService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Admin->>UI: 1.1 Nhập tên chương trình, độ tuổi, ngôn ngữ, mô tả, trạng thái
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/programs (CreateProgramRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateProgramAsync(request)
+        activate Service
+
+        note over Service: Create Program entity
+        
+        Service->>DB: 3.2 ProgramRepository.AddAsync(program)
+        activate DB
+        DB-->>Service: 3.3 Success
+        deactivate DB
+
+        Service->>DB: 3.4 SaveChangesAsync()
+        activate DB
+        DB->>Database: 3.5 Execute INSERT query
+        activate Database
+        Database-->>DB: 3.6 Rows affected
+        deactivate Database
+        deactivate DB
+
+        Service-->>Endpoint: 3.7 (Succeeded = true, ProgramResponse)
+        deactivate Service
+        Endpoint-->>UI: 3.8 200 OK (ProgramResponse)
+    end
+    deactivate Endpoint
+    deactivate UI

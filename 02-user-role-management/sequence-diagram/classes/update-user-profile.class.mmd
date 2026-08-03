@@ -1,0 +1,84 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class UsersController {
+        -userService: IUserService
+        +Update(id: int, request: UpdateUserRequest) Task~ActionResult~
+    }
+
+    class UpdateUserRequest {
+        +Avatar: string
+        +FullName: string
+        +Email: string
+        +Phone: string
+        +Gender: string
+        +Specialty: string
+        +RoleName: UserRole?
+        +IsActive: bool?
+    }
+
+    class IUserService {
+        <<interface>>
+        +UpdateUserAsync(id: int, request: UpdateUserRequest) Task~Tuple~bool,bool,IEnumerable~string~,UserResponse~~~~
+    }
+
+    class UserService {
+        -unitOfWork: IUnitOfWork
+        +UpdateUserAsync(id: int, request: UpdateUserRequest) Task~Tuple~bool,bool,IEnumerable~string~,UserResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +UserRepository: IUserRepository
+        +RoleRepository: IRoleRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +UserRepository: IUserRepository
+        +RoleRepository: IRoleRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UserResponse {
+        +Avatar: string
+        +Id: int
+        +FullName: string
+        +Email: string
+        +Phone: string
+        +Gender: string
+        +Specialty: string
+        +RoleName: string
+        +IsActive: bool
+        +CreatedAt: DateTime
+        +UpdatedAt: DateTime
+    }
+
+    class User {
+        +Avatar: string
+        +FullName: string
+        +Email: string
+        +Phone: string
+        +Gender: string
+        +Specialty: string
+        +RoleId: int
+        +IsActive: bool
+        +IsDeleted: bool
+    }
+
+    class Role {
+        +RoleName: UserRole
+        +IsActive: bool
+    }
+
+    UsersController ..> UpdateUserRequest : uses
+    UsersController ..> IUserService : uses
+    IUserService <.. UserService : implements
+    UserService ..> IUnitOfWork : uses
+    UserService ..> UserResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> User : uses
+    UnitOfWork ..> Role : uses
+    User ..> Role : uses

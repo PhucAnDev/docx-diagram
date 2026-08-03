@@ -1,0 +1,41 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/files/chunks
+    actor Parent as Parent (VR Client Speak stream)
+    participant Endpoint as :FilesController
+    participant Storage as :IStorageService
+    participant MinIO as :MinIO Cloud Storage
+
+    Parent->>Endpoint: 1.1 POST /api/files/chunks (multipart/form-data: ChildProfileId, SessionId, ChunkIndex, AudioFile, IsFinalChunk)
+    activate Endpoint
+
+    alt AudioFile is null/empty
+        Endpoint-->>Parent: 1.2 400 Bad Request
+    else AudioFile provided
+        note over Endpoint: chunkObject = "records/{ChildProfileId}/{SessionId}/chunks/chunk_{ChunkIndex}.wav"
+        
+        Endpoint->>Storage: 2.1 UploadAsync(chunkStream, chunkObject, "audio/wav", ct)
+        activate Storage
+        Storage->>MinIO: 2.2 Upload wav chunk file
+        activate MinIO
+        MinIO-->>Storage: 2.3 Success
+        deactivate MinIO
+        Storage-->>Endpoint: 2.4 Upload completed
+        deactivate Storage
+
+        Endpoint->>Storage: 3.1 GetPresignedUrlAsync(chunkObject, 3600, ct)
+        activate Storage
+        Storage->>MinIO: 3.2 Get presigned download URL
+        activate MinIO
+        MinIO-->>Storage: 3.3 Presigned URL string
+        deactivate MinIO
+        Storage-->>Endpoint: 3.4 Chunk presigned URL
+        deactivate Storage
+
+        alt IsFinalChunk == true
+            Endpoint-->>Parent: 3.5.1 200 OK (UploadAudioChunkResponse: Status = "Completed", VoiceUrl = chunkUrl)
+        else IsFinalChunk == false
+            Endpoint-->>Parent: 3.5.2 200 OK (UploadAudioChunkResponse: Status = "ChunkUploaded", VoiceUrl = chunkUrl)
+        end
+    end
+    deactivate Endpoint

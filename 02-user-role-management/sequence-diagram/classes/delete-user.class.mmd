@@ -1,0 +1,42 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class UsersController {
+        -userService: IUserService
+        +Delete(id: int) Task~ActionResult~
+    }
+
+    class IUserService {
+        <<interface>>
+        +DeleteUserAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class UserService {
+        -unitOfWork: IUnitOfWork
+        +DeleteUserAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class User {
+        +IsDeleted: bool
+        +DeletedAt: DateTime?
+        +UpdatedAt: DateTime
+    }
+
+    UsersController ..> IUserService : uses
+    IUserService <.. UserService : implements
+    UserService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> User : uses

@@ -1,0 +1,69 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class LessonsController {
+        -lessonService: ILessonService
+        +GetList(pageNumber: int, pageSize: int) Task~ActionResult~
+    }
+
+    class ILessonService {
+        <<interface>>
+        +GetListLessonAsync(pageNumber: int, pageSize: int) Task~PagedResponse~LessonResponse~~
+    }
+
+    class LessonService {
+        -unitOfWork: IUnitOfWork
+        +GetListLessonAsync(pageNumber: int, pageSize: int) Task~PagedResponse~LessonResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +LessonRepository: ILessonRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +LessonRepository: ILessonRepository
+    }
+
+    class LessonResponse {
+        +Id: int
+        +ProgramId: int
+        +LessonName: string
+        +LessonOrder: int
+        +Description: string
+        +TargetSkill: string
+        +EstimatedDuration: int
+        +Status: string
+        +MaxScore: float
+        +CreatedAt: DateTime
+        +UpdatedAt: DateTime
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class Lesson {
+        +ProgramId: int
+        +LessonName: string
+        +LessonOrder: int
+        +Description: string
+        +TargetSkill: string
+        +EstimatedDuration: int
+        +Status: string
+        +MaxScore: float
+    }
+
+    LessonsController ..> ILessonService : uses
+    ILessonService <.. LessonService : implements
+    LessonService ..> IUnitOfWork : uses
+    LessonService ..> PagedResponse~LessonResponse~ : uses
+    PagedResponse~LessonResponse~ ..> LessonResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Lesson : uses

@@ -1,0 +1,59 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ExerciseTypesController {
+        -typeService: IExerciseTypeService
+        +Create(request: CreateExerciseTypeRequest) Task~ActionResult~
+    }
+
+    class CreateExerciseTypeRequest {
+        +TypeName: string
+        +Description: string
+        +IsActive: bool
+    }
+
+    class IExerciseTypeService {
+        <<interface>>
+        +CreateAsync(request: CreateExerciseTypeRequest) Task~Tuple~bool,IEnumerable~string~,ExerciseTypeResponse~~~~
+    }
+
+    class ExerciseTypeService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +CreateAsync(request: CreateExerciseTypeRequest) Task~Tuple~bool,IEnumerable~string~,ExerciseTypeResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExerciseTypeRepository: IExerciseTypeRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ExerciseTypeRepository: IExerciseTypeRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ExerciseTypeResponse {
+        +Id: int
+        +TypeName: string
+        +Description: string
+        +IsActive: bool
+    }
+
+    class ExerciseType {
+        +TypeName: string
+        +Description: string
+        +IsActive: bool
+        +IsDeleted: bool
+    }
+
+    ExerciseTypesController ..> CreateExerciseTypeRequest : uses
+    ExerciseTypesController ..> IExerciseTypeService : uses
+    IExerciseTypeService <.. ExerciseTypeService : implements
+    ExerciseTypeService ..> IUnitOfWork : uses
+    ExerciseTypeService ..> ExerciseTypeResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ExerciseType : uses

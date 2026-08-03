@@ -1,0 +1,69 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class SchoolYearsController {
+        -schoolYearService: ISchoolYearService
+        +Create(request: CreateSchoolYearRequest) Task~IActionResult~
+    }
+
+    class CreateSchoolYearRequest {
+        +YearName: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+    }
+
+    class ISchoolYearService {
+        <<interface>>
+        +CreateSchoolYearAsync(request: CreateSchoolYearRequest) Task~Tuple~bool,IEnumerable~string~,SchoolYearResponse~~~~
+    }
+
+    class SchoolYearService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +CreateSchoolYearAsync(request: CreateSchoolYearRequest) Task~Tuple~bool,IEnumerable~string~,SchoolYearResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +SchoolYearRepository: ISchoolYearRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class ISchoolYearRepository {
+        <<interface>>
+        +HasOverlappingAsync(start: DateTime, end: DateTime, excludeId: int?) Task~bool~
+        +HasActiveSchoolYearAsync(excludeId: int?) Task~bool~
+    }
+
+    class SchoolYearRepository {
+        +HasOverlappingAsync(start: DateTime, end: DateTime, excludeId: int?) Task~bool~
+        +HasActiveSchoolYearAsync(excludeId: int?) Task~bool~
+    }
+
+    class SchoolYearResponse {
+        +Id: int
+        +YearName: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+        +Semesters: List~SemesterResponse~
+    }
+
+    class SchoolYear {
+        +YearName: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+        +Semesters: List~Semester~
+    }
+
+    SchoolYearsController ..> CreateSchoolYearRequest : uses
+    SchoolYearsController ..> ISchoolYearService : uses
+    ISchoolYearService <.. SchoolYearService : implements
+    SchoolYearService ..> IUnitOfWork : uses
+    SchoolYearService ..> SchoolYearResponse : uses
+    IUnitOfWork ..> ISchoolYearRepository : exposes
+    ISchoolYearRepository <.. SchoolYearRepository : implements
+    SchoolYearRepository ..> SchoolYear : uses

@@ -1,0 +1,48 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ExercisesController {
+        -exerciseService: IExerciseService
+        +Delete(id: int) Task~ActionResult~
+    }
+
+    class IExerciseService {
+        <<interface>>
+        +DeleteAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class ExerciseService {
+        -unitOfWork: IUnitOfWork
+        +DeleteAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExerciseRepository: IExerciseRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ExerciseRepository: IExerciseRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class Exercise {
+        +IsDeleted: bool
+        +DeletedAt: DateTime?
+        +UpdatedAt: DateTime
+        +Results: ICollection~Result~
+    }
+
+    class Result {
+        +Id: int
+    }
+
+    ExercisesController ..> IExerciseService : uses
+    IExerciseService <.. ExerciseService : implements
+    ExerciseService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Exercise : uses
+    Exercise ..> Result : uses

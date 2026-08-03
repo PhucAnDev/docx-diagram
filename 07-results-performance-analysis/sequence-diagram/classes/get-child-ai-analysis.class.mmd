@@ -1,0 +1,69 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class AnalyzeController {
+        -analyzeService: IAnalyzeService
+        -unitOfWork: IUnitOfWork
+        +GetByChildId(childId: int) Task~ActionResult~
+    }
+
+    class IAnalyzeService {
+        <<interface>>
+        +GetAnalyzesByChildIdAsync(childId: int) Task~IEnumerable~AnalyzeResponse~~
+    }
+
+    class AnalyzeService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +GetAnalyzesByChildIdAsync(childId: int) Task~IEnumerable~AnalyzeResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +AnalyzeRepository: IAnalyzeRepository
+        +ChildProfileRepository: IChildProfileRepository
+        +EnrollmentRepository: IEnrollmentRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +AnalyzeRepository: IAnalyzeRepository
+        +ChildProfileRepository: IChildProfileRepository
+        +EnrollmentRepository: IEnrollmentRepository
+    }
+
+    class AnalyzeResponse {
+        +Id: int
+        +ChildId: int
+        +SpeechEvaluationScore: double
+        +BehaviorScore: double
+        +ConfidenceScore: double
+        +AnalysisDetail: string
+        +SummaryRecommendation: string
+        +CreatedAt: DateTime
+    }
+
+    class Analyze {
+        +ChildId: int
+        +SpeechEvaluationScore: double
+        +BehaviorScore: double
+        +ConfidenceScore: double
+        +AnalysisDetail: string
+        +SummaryRecommendation: string
+    }
+
+    class ChildProfile {
+        +UserId: int
+        +FullName: string
+    }
+
+    AnalyzeController ..> IAnalyzeService : uses
+    AnalyzeController ..> IUnitOfWork : uses
+    IAnalyzeService <.. AnalyzeService : implements
+    AnalyzeService ..> IUnitOfWork : uses
+    AnalyzeService ..> AnalyzeResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Analyze : uses
+    UnitOfWork ..> ChildProfile : uses
+    Analyze ..> ChildProfile : belongs to

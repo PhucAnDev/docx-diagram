@@ -1,0 +1,51 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title DELETE /api/exercise-questions/{id}
+    actor TeacherUser as Teacher/Admin
+    participant UI as DeleteQuestionUI
+    participant Endpoint as :ExerciseQuestionsController
+    participant Service as :ExerciseQuestionService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    TeacherUser->>UI: 1.1 Yêu cầu xóa câu hỏi luyện tập
+    activate UI
+    UI->>Endpoint: 2.1 DELETE /api/exercise-questions/{id}
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 DeleteAsync(id)
+    activate Service
+
+    Service->>DB: 3.2 ExerciseQuestionRepository.GetFirstOrDefaultAsync(q => q.Id == id && !q.IsDeleted, includeProperties: "Exercise.Results")
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 ExerciseQuestion entity or null
+    deactivate Database
+    deactivate DB
+
+    alt Question not found
+        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+        Endpoint-->>UI: 3.5.2 404 Not Found (Question not found.)
+    else Question exists
+        alt Exercise has historical Results (BR-72)
+            Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Cannot delete a question...")
+            Endpoint-->>UI: 3.6.2 400 Bad Request (Cannot delete...)
+        else No historical results exist
+            note over Service: entity.IsDeleted = true<br/>entity.DeletedAt = DateTime.UtcNow<br/>entity.UpdatedAt = DateTime.UtcNow
+
+            Service->>DB: 3.7 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.8 Execute UPDATE query
+            activate Database
+            Database-->>DB: 3.9 Rows affected
+            deactivate Database
+            deactivate DB
+
+            Service-->>Endpoint: 3.10 (Succeeded = true)
+            deactivate Service
+            Endpoint-->>UI: 3.11 200 OK (Question deleted successfully.)
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

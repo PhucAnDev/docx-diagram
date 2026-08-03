@@ -1,0 +1,83 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title PUT /api/Users/{id}
+    actor User as User (Admin/Teacher/Parent)
+    participant UI as UpdateUserProfileUI
+    participant Endpoint as :UsersController
+    participant Service as :UserService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Chỉnh sửa thông tin cá nhân và nhấn Lưu
+    activate UI
+    UI->>Endpoint: 2.1 PUT /api/Users/{id} (UpdateUserRequest)
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 UpdateUserAsync(id, request)
+    activate Service
+
+    Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, includeProperties: "Role")
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 User entity with Role or null
+    deactivate Database
+    deactivate DB
+
+    alt User not found (user == null)
+        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+        Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
+    else User exists
+        alt Email is updated and unique check fails
+            Service->>DB: 3.6 UserRepository.ExistsAsync(u => u.Email == request.Email && u.Id != id && !u.IsDeleted)
+            activate DB
+            DB->>Database: 3.7 Execute SELECT count query
+            activate Database
+            Database-->>DB: 3.8 Email exists boolean
+            deactivate Database
+            deactivate DB
+
+            alt Email already exists
+                Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Email ... đã được dùng...")
+                Endpoint-->>UI: 3.9.2 400 Bad Request (Email ... đã được dùng...)
+            end
+        else Email valid
+            alt RoleName is provided in update
+                Service->>DB: 3.10 RoleRepository.GetFirstOrDefaultAsync(r => r.RoleName == request.RoleName && r.IsActive)
+                activate DB
+                DB->>Database: 3.11 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.12 Role entity or null
+                deactivate Database
+                deactivate DB
+
+                alt Role not found or inactive
+                    Service-->>Endpoint: 3.13.1 (Succeeded = false, Error = "Role ... không tồn tại...")
+                    Endpoint-->>UI: 3.13.2 400 Bad Request (Role ... không tồn tại...)
+                else Role valid
+                    note over Service: Update user.RoleId & user.Role
+                end
+            end
+            
+            note over Service: Update remaining user fields (Avatar, FullName, Gender, Specialty, Phone, IsActive)<br/>user.UpdatedAt = DateTime.UtcNow
+
+            Service->>DB: 3.14 UserRepository.Update(user)
+            activate DB
+            DB-->>Service: 3.15 Success
+            deactivate DB
+
+            Service->>DB: 3.16 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.17 Execute UPDATE query
+            activate Database
+            Database-->>DB: 3.18 Rows affected
+            deactivate Database
+            deactivate DB
+
+            Service-->>Endpoint: 3.19 (Succeeded = true, UserResponse)
+            deactivate Service
+            Endpoint-->>UI: 3.20 200 OK (UserResponse)
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

@@ -1,0 +1,47 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/Files/chunks/assess
+    actor Child as Child (Godot Client)
+    participant UI as Godot Speech Scene
+    participant Endpoint as :FilesController
+    participant Storage as :MinIOService
+    participant Azure as :Azure Speech API
+    participant HttpClient as :HttpClient
+
+    Child->>UI: 1.1 Hoàn thành phát âm một từ/câu luyện nói
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/Files/chunks/assess (AssessChunkRequest)
+    activate Endpoint
+
+    note over Endpoint: Đọc cấu hình AzureSpeech từ appsettings.json
+    
+    alt Azure Configuration is missing or mock
+        note over Endpoint: Tạo kết quả đánh giá giả lập (Mock Assessment)
+        Endpoint-->>UI: 2.2 200 OK (Mock Assessment Response)
+    else Azure Configuration is valid
+        note over Endpoint: objectName = "records/{ChildProfileId}/{SessionId}/chunks/chunk_{ChunkIndex}.wav"
+        
+        Endpoint->>Storage: 3.1 DownloadAsync(objectName, memoryStream, ct)
+        activate Storage
+        Storage-->>Endpoint: 3.2 File stream response
+        deactivate Storage
+
+        Endpoint->>HttpClient: 4.1 PostAsync(Url, StreamContent, CancellationToken)
+        activate HttpClient
+        note over HttpClient: Headers:<br/>Ocp-Apim-Subscription-Key: {Key}<br/>Pronunciation-Assessment: {Base64-Params}
+        
+        HttpClient->>Azure: 4.2 HTTP POST request with audio stream
+        activate Azure
+        Azure-->>HttpClient: 4.3 HTTP 200 OK with analysis JSON
+        deactivate Azure
+        HttpClient-->>Endpoint: 4.4 Response content
+        deactivate HttpClient
+
+        alt NBest Array has items in JSON response
+            Endpoint-->>UI: 4.5 200 OK (NBest[0] assessment result)
+        else Plain JSON response
+            Endpoint-->>UI: 4.6 200 OK (Root JSON result)
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

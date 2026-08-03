@@ -1,0 +1,91 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/exercise-questions
+    actor TeacherUser as Teacher/Admin
+    participant UI as CreateQuestionUI
+    participant Endpoint as :ExerciseQuestionsController
+    participant Service as :ExerciseQuestionService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    TeacherUser->>UI: 1.1 Nhập thông tin câu hỏi (câu mẫu, câu trả lời, loại hình, file âm thanh, hình ảnh)
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/exercise-questions (CreateExerciseQuestionRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateAsync(request)
+        activate Service
+
+        alt QuestionSentence/AnswerSentence/InputType blank (BR-69)
+            Service-->>Endpoint: 3.2.1 (Succeeded = false, Error = "Vui lòng nhập đầy đủ các trường bắt buộc...")
+            Endpoint-->>UI: 3.2.2 400 Bad Request (Vui lòng nhập đầy đủ...)
+        else Required fields valid
+            alt AudioURL extension invalid (BR-71)
+                Service-->>Endpoint: 3.3.1 (Succeeded = false, Error = "Tập tin âm thanh không hợp lệ.")
+                Endpoint-->>UI: 3.3.2 400 Bad Request (Tập tin âm thanh...)
+            else AudioURL extension valid
+                alt ImageURL extension invalid (BR-71)
+                    Service-->>Endpoint: 3.4.1 (Succeeded = false, Error = "Tập tin hình ảnh không hợp lệ.")
+                    Endpoint-->>UI: 3.4.2 400 Bad Request (Tập tin hình ảnh...)
+                else ImageURL extension valid
+                    Service->>DB: 3.5 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.TeacherId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
+                    activate DB
+                    DB->>Database: 3.6 Execute SELECT query
+                    activate Database
+                    Database-->>DB: 3.7 Teacher entity or null
+                    deactivate Database
+                    deactivate DB
+
+                    alt Teacher not found/inactive/not Teacher (BR-56)
+                        Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Không tìm thấy giáo viên...")
+                        Endpoint-->>UI: 3.8.2 400 Bad Request (Không tìm thấy giáo viên...)
+                    else Teacher valid
+                        Service->>DB: 3.9 ExerciseRepository.GetFirstOrDefaultAsync(e => e.Id == request.ExerciseId && !e.IsDeleted)
+                        activate DB
+                        DB->>Database: 3.10 Execute SELECT query
+                        activate Database
+                        Database-->>DB: 3.11 Exercise entity or null
+                        deactivate Database
+                        deactivate DB
+
+                        alt Exercise not found (BR-60)
+                            Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Không tìm thấy bài tập.")
+                            Endpoint-->>UI: 3.12.2 400 Bad Request (Không tìm thấy bài tập.)
+                        else Exercise valid
+                            note over Service: Create ExerciseQuestion entity
+                            
+                            Service->>DB: 3.13 ExerciseQuestionRepository.AddAsync(entity)
+                            activate DB
+                            DB-->>Service: 3.14 Success
+                            deactivate DB
+
+                            Service->>DB: 3.15 SaveChangesAsync()
+                            activate DB
+                            DB->>Database: 3.16 Execute INSERT query
+                            activate Database
+                            Database-->>DB: 3.17 Rows affected
+                            deactivate Database
+                            deactivate DB
+
+                            Service->>DB: 3.18 ExerciseQuestionRepository.GetFirstOrDefaultAsync(q => q.Id == entity.Id, includeProperties: "Exercise,Teacher")
+                            activate DB
+                            DB->>Database: 3.19 Execute SELECT with includes
+                            activate Database
+                            Database-->>DB: 3.20 Created ExerciseQuestion entity with details
+                            deactivate Database
+                            deactivate DB
+
+                            Service-->>Endpoint: 3.21 (Succeeded = true, ExerciseQuestionResponse)
+                            deactivate Service
+                            Endpoint-->>UI: 3.22 200 OK (ExerciseQuestionResponse)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

@@ -1,0 +1,74 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ClassroomsController {
+        -classroomService: IClassroomService
+        +GetById(id: int) Task~ActionResult~
+    }
+
+    class IClassroomService {
+        <<interface>>
+        +GetClassroomByIdAsync(id: int) Task~ClassroomResponse~
+    }
+
+    class ClassroomService {
+        -unitOfWork: IUnitOfWork
+        +GetClassroomByIdAsync(id: int) Task~ClassroomResponse~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ClassroomRepository: IClassroomRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ClassroomRepository: IClassroomRepository
+    }
+
+    class ClassroomResponse {
+        +Id: int
+        +ClassName: string
+        +Description: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+        +TeacherName: string
+        +ProgramName: string
+        +SemesterName: string
+        +EnrollmentsCount: int
+    }
+
+    class Classroom {
+        +ClassName: string
+        +Description: string
+        +StartDate: DateTime
+        +EndDate: DateTime
+        +Status: string
+        +UserId: int
+        +ProgramId: int
+        +SemesterId: int
+    }
+
+    class User {
+        +FullName: string
+    }
+
+    class Program {
+        +ProgramName: string
+    }
+
+    class Semester {
+        +SemesterName: string
+    }
+
+    ClassroomsController ..> IClassroomService : uses
+    IClassroomService <.. ClassroomService : implements
+    ClassroomService ..> IUnitOfWork : uses
+    ClassroomService ..> ClassroomResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Classroom : uses
+    Classroom ..> User : uses
+    Classroom ..> Program : uses
+    Classroom ..> Semester : uses

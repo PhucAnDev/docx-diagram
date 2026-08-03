@@ -1,0 +1,66 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title PUT /api/Roles/{id}
+    actor Admin as Admin
+    participant UI as UpdateRoleUI
+    participant Endpoint as :RolesController
+    participant Service as :RoleService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Admin->>UI: 1.1 Chỉnh sửa thông tin vai trò và nhấn Lưu
+    activate UI
+    UI->>Endpoint: 2.1 PUT /api/Roles/{id} (UpdateRoleRequest)
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 UpdateRoleAsync(id, request)
+    activate Service
+
+    Service->>DB: 3.2 RoleRepository.GetFirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 Role entity or null
+    deactivate Database
+    deactivate DB
+
+    alt Role not found (role == null)
+        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+        Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
+    else Role exists
+        alt RoleName is updated and unique check fails
+            Service->>DB: 3.6 RoleRepository.ExistsAsync(r => r.RoleName == request.RoleName && r.Id != id && !r.IsDeleted)
+            activate DB
+            DB->>Database: 3.7 Execute SELECT count query
+            activate Database
+            Database-->>DB: 3.8 Role exists boolean
+            deactivate Database
+            deactivate DB
+
+            alt Role already exists
+                Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Role ... already exists.")
+                Endpoint-->>UI: 3.9.2 400 Bad Request (Role already exists.)
+            end
+        else RoleName valid or not updated
+            note over Service: Update role fields (RoleName, Description, IsActive)<br/>role.UpdatedAt = DateTime.UtcNow
+            
+            Service->>DB: 3.10 RoleRepository.Update(role)
+            activate DB
+            DB-->>Service: 3.11 Success
+            deactivate DB
+
+            Service->>DB: 3.12 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.13 Execute UPDATE query
+            activate Database
+            Database-->>DB: 3.14 Rows affected
+            deactivate Database
+            deactivate DB
+
+            Service-->>Endpoint: 3.15 (Succeeded = true, RoleResponse)
+            deactivate Service
+            Endpoint-->>UI: 3.16 200 OK (RoleResponse)
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

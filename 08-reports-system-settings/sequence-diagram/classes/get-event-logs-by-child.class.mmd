@@ -1,0 +1,52 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class EventLogsController {
+        -uow: IUnitOfWork
+        -mapper: IMapper
+        +GetByResult(resultId: int) Task~IActionResult~
+        +GetByChild(childId: int) Task~IActionResult~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ChildProfileRepository: IChildProfileRepository
+        +EnrollmentRepository: IEnrollmentRepository
+        +EventLogRepository: IEventLogRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ChildProfileRepository: IChildProfileRepository
+        +EnrollmentRepository: IEnrollmentRepository
+        +EventLogRepository: IEventLogRepository
+    }
+
+    class EventLogResponse {
+        +Id: int
+        +ResultId: int?
+        +ChildId: int
+        +EventType: string
+        +EventTime: DateTime
+        +Description: string
+    }
+
+    class EventLog {
+        +ResultId: int?
+        +ChildId: int
+        +EventType: string
+        +EventTime: DateTime
+        +Description: string
+    }
+
+    class ChildProfile {
+        +UserId: int
+    }
+
+    EventLogsController ..> IUnitOfWork : uses
+    EventLogsController ..> EventLogResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> EventLog : uses
+    UnitOfWork ..> ChildProfile : uses
+    ChildProfile ..> EventLog : one-to-many

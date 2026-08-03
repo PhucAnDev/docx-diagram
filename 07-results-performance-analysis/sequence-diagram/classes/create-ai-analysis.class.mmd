@@ -1,0 +1,101 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class AnalyzeController {
+        -analyzeService: IAnalyzeService
+        -unitOfWork: IUnitOfWork
+        +Create(request: CreateAnalyzeRequest) Task~ActionResult~
+    }
+
+    class CreateAnalyzeRequest {
+        +ChildId: int
+        +SpeechLevel: SpeechLevel
+        +Diagnosis: string
+        +Difficulties: string
+        +Strengths: string
+        +Weaknesses: string
+        +CommunicationAbility: AssessmentLevel
+        +PronunciationAbility: AssessmentLevel
+        +LanguageComprehension: AssessmentLevel
+        +LanguageExpression: AssessmentLevel
+        +AttentionLevel: AssessmentLevel
+        +SocialInteraction: AssessmentLevel
+        +InterventionGoals: string
+        +Recommendation: string
+        +Notes: string
+        +AssessmentDate: DateTime
+        +NextAssessmentDate: DateTime?
+    }
+
+    class IAnalyzeService {
+        <<interface>>
+        +CreateAnalyzeAsync(request: CreateAnalyzeRequest) Task~Tuple~bool,IEnumerable~string~,AnalyzeResponse~~~~
+    }
+
+    class AnalyzeService {
+        -unitOfWork: IUnitOfWork
+        -mapper: IMapper
+        +CreateAnalyzeAsync(request: CreateAnalyzeRequest) Task~Tuple~bool,IEnumerable~string~,AnalyzeResponse~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +AnalyzeRepository: IAnalyzeRepository
+        +ChildProfileRepository: IChildProfileRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +AnalyzeRepository: IAnalyzeRepository
+        +ChildProfileRepository: IChildProfileRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class AnalyzeResponse {
+        +Id: int
+        +ChildId: int
+        +SpeechLevel: SpeechLevel
+        +Diagnosis: string
+        +InterventionGoals: string
+        +Recommendation: string
+        +AssessmentDate: DateTime
+    }
+
+    class Analyze {
+        +ChildId: int
+        +SpeechLevel: SpeechLevel
+        +Diagnosis: string
+        +Difficulties: string
+        +Strengths: string
+        +Weaknesses: string
+        +CommunicationAbility: AssessmentLevel
+        +PronunciationAbility: AssessmentLevel
+        +LanguageComprehension: AssessmentLevel
+        +LanguageExpression: AssessmentLevel
+        +AttentionLevel: AssessmentLevel
+        +SocialInteraction: AssessmentLevel
+        +InterventionGoals: string
+        +Recommendation: string
+        +Notes: string
+        +AssessmentDate: DateTime
+        +NextAssessmentDate: DateTime?
+    }
+
+    class ChildProfile {
+        +FullName: string
+        +Age: int
+        +Gender: string
+        +LearningLevel: string
+    }
+
+    AnalyzeController ..> CreateAnalyzeRequest : uses
+    AnalyzeController ..> IAnalyzeService : uses
+    IAnalyzeService <.. AnalyzeService : implements
+    AnalyzeService ..> IUnitOfWork : uses
+    AnalyzeService ..> AnalyzeResponse : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Analyze : uses
+    UnitOfWork ..> ChildProfile : uses
+    Analyze ..> ChildProfile : uses

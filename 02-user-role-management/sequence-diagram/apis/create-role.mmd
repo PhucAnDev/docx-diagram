@@ -1,0 +1,55 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/Roles
+    actor Admin as Admin
+    participant UI as CreateRoleUI
+    participant Endpoint as :RolesController
+    participant Service as :RoleService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Admin->>UI: 1.1 Nhập tên vai trò, mô tả và nhấn Tạo mới
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/Roles (CreateRoleRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateRoleAsync(request)
+        activate Service
+
+        Service->>DB: 3.2 RoleRepository.ExistsAsync(r => r.RoleName == request.RoleName && !r.IsDeleted)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT count query
+        activate Database
+        Database-->>DB: 3.4 Role exists boolean
+        deactivate Database
+        deactivate DB
+
+        alt Role already exists
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Role ... already exists.")
+            Endpoint-->>UI: 3.5.2 400 Bad Request (Role already exists.)
+        else Role is unique
+            note over Service: Create Role entity with RoleName, Description, IsActive = true
+            
+            Service->>DB: 3.6 RoleRepository.AddAsync(role)
+            activate DB
+            DB-->>Service: 3.7 Success
+            deactivate DB
+
+            Service->>DB: 3.8 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.9 Execute INSERT query
+            activate Database
+            Database-->>DB: 3.10 Rows affected
+            deactivate Database
+            deactivate DB
+
+            Service-->>Endpoint: 3.11 (Succeeded = true, RoleResponse)
+            deactivate Service
+            Endpoint-->>UI: 3.12 200 OK (RoleResponse)
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

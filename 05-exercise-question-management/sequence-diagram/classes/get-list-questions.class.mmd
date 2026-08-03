@@ -1,0 +1,80 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ExerciseQuestionsController {
+        -questionService: IExerciseQuestionService
+        +GetList(pageNumber: int, pageSize: int, exerciseId: int?, teacherId: int?) Task~ActionResult~
+    }
+
+    class IExerciseQuestionService {
+        <<interface>>
+        +GetListAsync(pageNumber: int, pageSize: int, exerciseId: int?, teacherId: int?) Task~PagedResponse~ExerciseQuestionResponse~~
+    }
+
+    class ExerciseQuestionService {
+        -unitOfWork: IUnitOfWork
+        +GetListAsync(pageNumber: int, pageSize: int, exerciseId: int?, teacherId: int?) Task~PagedResponse~ExerciseQuestionResponse~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ExerciseQuestionRepository: IExerciseQuestionRepository
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ExerciseQuestionRepository: IExerciseQuestionRepository
+    }
+
+    class ExerciseQuestionResponse {
+        +Id: int
+        +ExerciseId: int
+        +TeacherId: int
+        +Instruction: string
+        +QuestionSentence: string
+        +AnswerSentence: string
+        +InputType: string
+        +AudioURL: string
+        +ImageURL: string
+        +ExerciseName: string
+        +TeacherName: string
+        +CreatedAt: DateTime
+    }
+
+    class PagedResponse~T~ {
+        +PageNumber: int
+        +PageSize: int
+        +TotalCount: int
+        +TotalPages: int
+        +Items: List~T~
+    }
+
+    class ExerciseQuestion {
+        +ExerciseId: int
+        +TeacherId: int
+        +Instruction: string
+        +QuestionSentence: string
+        +AnswerSentence: string
+        +InputType: string
+        +AudioURL: string
+        +ImageURL: string
+    }
+
+    class Exercise {
+        +ExerciseName: string
+    }
+
+    class User {
+        +FullName: string
+    }
+
+    ExerciseQuestionsController ..> IExerciseQuestionService : uses
+    IExerciseQuestionService <.. ExerciseQuestionService : implements
+    ExerciseQuestionService ..> IUnitOfWork : uses
+    ExerciseQuestionService ..> PagedResponse~ExerciseQuestionResponse~ : uses
+    PagedResponse~ExerciseQuestionResponse~ ..> ExerciseQuestionResponse : wraps
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> ExerciseQuestion : uses
+    ExerciseQuestion ..> Exercise : uses
+    ExerciseQuestion ..> User : uses

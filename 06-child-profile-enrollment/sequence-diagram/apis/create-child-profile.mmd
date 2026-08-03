@@ -1,0 +1,60 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/child-profiles
+    actor User as User (Parent/Teacher/Admin)
+    participant UI as CreateChildProfileUI
+    participant Endpoint as :ChildProfilesController
+    participant Service as :ChildProfileService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Nhập thông tin trẻ (họ tên, tuổi, giới tính, avatar, trình độ...)
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/child-profiles (CreateChildProfileRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateChildProfileAsync(request)
+        activate Service
+
+        Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted && u.IsActive)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 User entity or null
+        deactivate Database
+        deactivate DB
+
+        alt User not found/inactive
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Người dùng liên kết không tồn tại.")
+            Endpoint-->>UI: 3.5.2 400 Bad Request (Người dùng liên kết...)
+        else User valid
+            note over Service: Map request to ChildProfile entity
+            
+            Service->>DB: 3.6 ChildProfileRepository.AddAsync(childProfile)
+            activate DB
+            DB-->>Service: 3.7 Success
+            deactivate DB
+
+            Service->>DB: 3.8 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.9 Execute INSERT query
+            activate Database
+            Database-->>DB: 3.10 Rows affected
+            deactivate Database
+            deactivate DB
+
+            alt SaveChangesAsync failed
+                Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Kiến tạo hồ sơ trẻ thất bại.")
+                Endpoint-->>UI: 3.11.2 400 Bad Request (Kiến tạo hồ sơ trẻ thất bại.)
+            else SaveChangesAsync success
+                Service-->>Endpoint: 3.12.1 (Succeeded = true, ChildProfileResponse)
+                deactivate Service
+                Endpoint-->>UI: 3.12.2 200 OK (ChildProfileResponse)
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

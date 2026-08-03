@@ -1,0 +1,55 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title PUT /api/results/{id}/feedback
+    actor User as User (Admin/Teacher)
+    participant UI as TeacherFeedbackUI
+    participant Endpoint as :ResultsController
+    participant Service as :ResultService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Nhập nhận xét kết quả của bé và nhấn Lưu
+    activate UI
+    UI->>Endpoint: 2.1 PUT /api/results/{id}/feedback (UpdateFeedbackRequest)
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 UpdateFeedbackAsync(id, request.FeedbackText)
+    activate Service
+
+    Service->>DB: 3.2 ResultRepository.GetByIdAsync(id)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 Result entity or null
+    deactivate Database
+    deactivate DB
+
+    alt Result not found
+        Service-->>Endpoint: 3.5.1 Success = false, Result not found.
+        Endpoint-->>UI: 3.5.2 404 Not Found (Result not found.)
+    else Result exists
+        note over Service: result.FeedbackText = feedbackText
+        
+        Service->>DB: 3.6 ResultRepository.Update(result)
+        Service->>DB: 3.7 SaveChangesAsync()
+        activate DB
+        DB->>Database: 3.8 Execute UPDATE query
+        activate Database
+        Database-->>DB: 3.9 Rows affected
+        deactivate Database
+        deactivate DB
+
+        Service->>DB: 3.10 ResultRepository.GetWithDetailsAsync(id)
+        activate DB
+        DB->>Database: 3.11 Execute SELECT with details
+        activate Database
+        Database-->>DB: 3.12 Result with details
+        deactivate Database
+        deactivate DB
+
+        Service-->>Endpoint: 3.13 Success = true, ResultResponse
+        deactivate Service
+        Endpoint-->>UI: 3.14 200 OK (ResultResponse)
+    end
+    deactivate Endpoint
+    deactivate UI

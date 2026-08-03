@@ -1,0 +1,43 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class AuthController {
+        -authService: IAuthService
+        +VerifyEmail(token: string) Task~ActionResult~
+    }
+
+    class IAuthService {
+        <<interface>>
+        +VerifyEmailAsync(token: string) Task~Tuple~bool,IEnumerable~string~~~~
+    }
+
+    class AuthService {
+        -unitOfWork: IUnitOfWork
+        +VerifyEmailAsync(token: string) Task~Tuple~bool,IEnumerable~string~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class User {
+        +VerifyToken: string
+        +VerifyTokenExpiry: DateTime?
+        +IsEmailVerified: bool
+        +IsActive: bool
+    }
+
+    AuthController ..> IAuthService : uses
+    IAuthService <.. AuthService : implements
+    AuthService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> User : uses

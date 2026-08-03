@@ -1,0 +1,36 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title GET /api/lessons/{id}
+    actor User as User (Admin/Teacher/Parent)
+    participant UI as GetLessonByIdUI
+    participant Endpoint as :LessonsController
+    participant Service as :LessonService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    User->>UI: 1.1 Yêu cầu hiển thị chi tiết bài học
+    activate UI
+    UI->>Endpoint: 2.1 GET /api/lessons/{id}
+    activate Endpoint
+
+    Endpoint->>Service: 3.1 GetLessonByIdAsync(id)
+    activate Service
+
+    Service->>DB: 3.2 LessonRepository.GetFirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, tracked: false)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 Lesson entity or null
+    deactivate Database
+    deactivate DB
+
+    alt Lesson not found
+        Service-->>Endpoint: 3.5.1 null
+        Endpoint-->>UI: 3.5.2 404 Not Found (Lesson not found.)
+    else Lesson exists
+        Service-->>Endpoint: 3.6.1 LessonResponse
+        deactivate Service
+        Endpoint-->>UI: 3.6.2 200 OK (LessonResponse)
+    end
+    deactivate Endpoint
+    deactivate UI

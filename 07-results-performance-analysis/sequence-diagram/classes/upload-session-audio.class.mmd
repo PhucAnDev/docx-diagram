@@ -1,0 +1,34 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class FilesController {
+        -storage: IStorageService
+        -configuration: IConfiguration
+        +Upload(request: UploadFilesRequest, ct: CancellationToken) Task~ActionResult~
+    }
+
+    class UploadFilesRequest {
+        +ChildProfileId: int
+        +Metadata: IFormFile
+        +Audio: IFormFile
+    }
+
+    class UploadFilesResponse {
+        +FolderId: Guid
+    }
+
+    class IStorageService {
+        <<interface>>
+        +UploadAsync(stream: Stream, objectName: string, contentType: string, ct: CancellationToken) Task
+    }
+
+    class MinIoStorageService {
+        -minioClient: IMinioClient
+        +UploadAsync(stream: Stream, objectName: string, contentType: string, ct: CancellationToken) Task
+    }
+
+    FilesController ..> UploadFilesRequest : uses
+    FilesController ..> UploadFilesResponse : uses
+    FilesController ..> IStorageService : uses
+    IStorageService <.. MinIoStorageService : implements

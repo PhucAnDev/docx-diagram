@@ -1,0 +1,89 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class AuthController {
+        -authService: IAuthService
+        +RefreshToken(request: RefreshTokenRequest) Task~ActionResult~
+    }
+
+    class RefreshTokenRequest {
+        +AccessToken: string
+        +RefreshToken: string
+    }
+
+    class IAuthService {
+        <<interface>>
+        +RefreshTokenAsync(request: RefreshTokenRequest) Task~Tuple~bool,IEnumerable~string~,TokenModel~~~~
+    }
+
+    class AuthService {
+        -unitOfWork: IUnitOfWork
+        -tokenService: ITokenService
+        -cache: IDistributedCache
+        +RefreshTokenAsync(request: RefreshTokenRequest) Task~Tuple~bool,IEnumerable~string~,TokenModel~~~~
+    }
+
+    class ITokenService {
+        <<interface>>
+        +GenerateAccessToken(user: User) string
+        +GenerateRefreshToken() string
+        +GetPrincipalFromExpiredToken(token: string) ClaimsPrincipal
+    }
+
+    class IDistributedCache {
+        <<interface>>
+        +GetStringAsync(key: string) Task~string~
+        +SetStringAsync(key: string, value: string, options: DistributedCacheEntryOptions) Task
+    }
+
+    class TokenModel {
+        +AccessToken: string
+        +RefreshToken: string
+        +User: UserAuthInfo
+    }
+
+    class UserAuthInfo {
+        +Id: int
+        +Email: string
+        +FullName: string
+        +Phone: string
+        +RoleName: string
+        +IsActive: bool
+        +MustChangePassword: bool
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +UserRepository: IUserRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class User {
+        +PasswordHash: string
+        +FullName: string
+        +Email: string
+        +RoleId: int
+    }
+
+    class Role {
+        +RoleName: UserRole
+    }
+
+    AuthController ..> RefreshTokenRequest : uses
+    AuthController ..> IAuthService : uses
+    IAuthService <.. AuthService : implements
+    AuthService ..> ITokenService : uses
+    AuthService ..> IDistributedCache : uses
+    AuthService ..> IUnitOfWork : uses
+    AuthService ..> TokenModel : uses
+    TokenModel ..> UserAuthInfo : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> User : uses
+    User ..> Role : uses

@@ -1,0 +1,99 @@
+%%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
+sequenceDiagram
+    title POST /api/classrooms
+    actor Admin as Admin
+    participant UI as CreateClassroomUI
+    participant Endpoint as :ClassroomsController
+    participant Service as :ClassroomService
+    participant DB as :UnitOfWork
+    participant Database as :Database
+
+    Admin->>UI: 1.1 Nhập tên lớp, chọn giáo viên, chương trình, học kỳ, ngày bắt đầu/kết thúc
+    activate UI
+    UI->>Endpoint: 2.1 POST /api/classrooms (CreateClassroomRequest)
+    activate Endpoint
+
+    alt ModelState.IsValid == false
+        Endpoint-->>UI: 2.2 400 Bad Request
+    else ModelState.IsValid == true
+        Endpoint->>Service: 3.1 CreateClassroomAsync(request)
+        activate Service
+
+        alt StartDate >= EndDate
+            Service-->>Endpoint: 3.2.1 (Succeeded = false, Error = "Ngày bắt đầu phải trước ngày kết thúc...")
+            Endpoint-->>UI: 3.2.2 400 Bad Request (Ngày bắt đầu phải trước ngày kết thúc...)
+        else StartDate < EndDate
+            Service->>DB: 3.3 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
+            activate DB
+            DB->>Database: 3.4 Execute SELECT query
+            activate Database
+            Database-->>DB: 3.5 Teacher entity or null
+            deactivate Database
+            deactivate DB
+
+            alt Teacher not found or inactive or not a Teacher
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không tìm thấy giáo viên...")
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Không tìm thấy giáo viên...)
+            else Teacher valid
+                Service->>DB: 3.7 ProgramRepository.GetFirstOrDefaultAsync(p => p.Id == request.ProgramId && !p.IsDeleted && p.Status == "Active")
+                activate DB
+                DB->>Database: 3.8 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.9 Program entity or null
+                deactivate Database
+                deactivate DB
+
+                alt Program not found or inactive
+                    Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Không tìm thấy chương trình học...")
+                    Endpoint-->>UI: 3.10.2 400 Bad Request (Không tìm thấy chương trình học...)
+                else Program valid
+                    Service->>DB: 3.11 SemesterRepository.GetFirstOrDefaultAsync(s => s.Id == request.SemesterId && !s.IsDeleted)
+                    activate DB
+                    DB->>Database: 3.12 Execute SELECT query
+                    activate Database
+                    Database-->>DB: 3.13 Semester entity or null
+                    deactivate Database
+                    deactivate DB
+
+                    alt Semester not found
+                        Service-->>Endpoint: 3.14.1 (Succeeded = false, Error = "Không tìm thấy học kỳ liên kết.")
+                        Endpoint-->>UI: 3.14.2 400 Bad Request (Không tìm thấy học kỳ liên kết.)
+                    else Semester valid
+                        alt Date outside semester bounds (StartDate < semester.StartDate || EndDate > semester.EndDate)
+                            Service-->>Endpoint: 3.15.1 (Succeeded = false, Error = "Thời gian lớp học phải nằm trong học kỳ.")
+                            Endpoint-->>UI: 3.15.2 400 Bad Request (Thời gian lớp học phải nằm trong học kỳ.)
+                        else Dates valid
+                            note over Service: Create Classroom entity
+                            
+                            Service->>DB: 3.16 ClassroomRepository.AddAsync(classroom)
+                            activate DB
+                            DB-->>Service: 3.17 Success
+                            deactivate DB
+
+                            Service->>DB: 3.18 SaveChangesAsync()
+                            activate DB
+                            DB->>Database: 3.19 Execute INSERT query
+                            activate Database
+                            Database-->>DB: 3.20 Rows affected
+                            deactivate Database
+                            deactivate DB
+
+                            Service->>DB: 3.21 ClassroomRepository.GetFirstOrDefaultAsync(c => c.Id == classroom.Id, includeProperties: "User,User.Role,Program,Semester,Enrollments")
+                            activate DB
+                            DB->>Database: 3.22 Execute SELECT with includes
+                            activate Database
+                            Database-->>DB: 3.23 Created Classroom entity with details
+                            deactivate Database
+                            deactivate DB
+
+                            Service-->>Endpoint: 3.24 (Succeeded = true, ClassroomResponse)
+                            deactivate Service
+                            Endpoint-->>UI: 3.25 200 OK (ClassroomResponse)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    deactivate Endpoint
+    deactivate UI

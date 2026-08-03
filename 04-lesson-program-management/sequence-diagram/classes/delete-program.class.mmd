@@ -1,0 +1,42 @@
+%%{init: {'theme':'base', 'flowchart':{'nodeSpacing':120,'rankSpacing':160,'curve':'linear'}, 'themeVariables': {'mainBkg':'#ffffff','nodeBorder':'#000000','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000','edgeLabelBackground':'#ffffff','classText':'#000000','lineColor':'#000000','primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000'}}}%%
+classDiagram
+    direction TB
+
+    class ProgramsController {
+        -programService: IProgramService
+        +Delete(id: int) Task~ActionResult~
+    }
+
+    class IProgramService {
+        <<interface>>
+        +DeleteProgramAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class ProgramService {
+        -unitOfWork: IUnitOfWork
+        +DeleteProgramAsync(id: int) Task~Tuple~bool,bool,IEnumerable~string~~~~
+    }
+
+    class IUnitOfWork {
+        <<interface>>
+        +ProgramRepository: IProgramRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class UnitOfWork {
+        -context: AppDbContext
+        +ProgramRepository: IProgramRepository
+        +SaveChangesAsync() Task~int~
+    }
+
+    class Program {
+        +IsDeleted: bool
+        +DeletedAt: DateTime?
+        +UpdatedAt: DateTime
+    }
+
+    ProgramsController ..> IProgramService : uses
+    IProgramService <.. ProgramService : implements
+    ProgramService ..> IUnitOfWork : uses
+    IUnitOfWork <.. UnitOfWork : implements
+    UnitOfWork ..> Program : uses

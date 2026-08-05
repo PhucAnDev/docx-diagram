@@ -13,17 +13,19 @@ sequenceDiagram
     UI->>Endpoint: 2.1 POST /api/Enrollments (CreateEnrollmentRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
+    alt request is null
+        Endpoint-->>UI: 2.2 400 Bad Request (Request body is required.)
+    else request is not null
         Endpoint->>Service: 3.1 CreateEnrollmentAsync(request, requesterId, requesterRole)
         activate Service
 
         alt Status is invalid (!["Active", "Pending", "Completed", "Cancelled"].Contains(request.Status))
             Service-->>Endpoint: 3.2.1 (Succeeded = false, Error = "Trạng thái không hợp lệ.")
-            Endpoint-->>UI: 3.2.2 400 Bad Request (Trạng thái không hợp lệ.)
+            deactivate Service
+            Endpoint-->>UI: 3.2.2 400 Bad Request (Tạo ghi danh thất bại.)
         else Status is valid
-            Service->>DB: 3.3 ChildProfileRepository.GetFirstOrDefaultAsync(c => c.Id == ChildId && !c.IsDeleted)
+            activate Service
+            Service->>DB: 3.3 Repository~ChildProfile~().GetFirstOrDefaultAsync(c => c.Id == ChildId && !c.IsDeleted)
             activate DB
             DB->>Database: 3.4 Execute SELECT query
             activate Database
@@ -33,9 +35,11 @@ sequenceDiagram
 
             alt Child does not exist
                 Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Hồ sơ trẻ không tồn tại.")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Hồ sơ trẻ không tồn tại.)
+                deactivate Service
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Tạo ghi danh thất bại.)
             else Child exists
-                Service->>DB: 3.7 ClassroomRepository.GetFirstOrDefaultAsync(c => c.Id == ClassId && !c.IsDeleted)
+                activate Service
+                Service->>DB: 3.7 Repository~Classroom~().GetFirstOrDefaultAsync(c => c.Id == ClassId && !c.IsDeleted)
                 activate DB
                 DB->>Database: 3.8 Execute SELECT query
                 activate Database
@@ -43,50 +47,63 @@ sequenceDiagram
                 deactivate Database
                 deactivate DB
 
-                alt Classroom does not exist or classroom.Status != "Active"
-                    Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Lớp học không tồn tại/không hoạt động.")
-                    Endpoint-->>UI: 3.10.2 400 Bad Request (Lớp học không tồn tại/không hoạt động.)
-                else Classroom exists and active
-                    alt requesterRole == "Teacher" && classroom.UserId != requesterId
-                        Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Giáo viên chỉ có thể ghi danh vào lớp của mình.")
-                        Endpoint-->>UI: 3.11.2 400 Bad Request (Giáo viên chỉ có thể ghi danh vào lớp của mình.)
-                    else Valid classroom for requester
-                        Service->>DB: 3.12 EnrollmentRepository.HasActiveEnrollmentAsync(ChildId, ClassId)
-                        activate DB
-                        DB->>Database: 3.13 Execute SELECT query
-                        activate Database
-                        Database-->>DB: 3.14 Boolean duplicate result
-                        deactivate Database
-                        deactivate DB
-
-                        alt Duplicate active enrollment exists
-                            Service-->>Endpoint: 3.15.1 (Succeeded = false, Error = "Trẻ đã có ghi danh Active trong lớp học này.")
-                            Endpoint-->>UI: 3.15.2 400 Bad Request (Trẻ đã có ghi danh Active trong lớp học này.)
-                        else Unique enrollment
-                            Service->>DB: 3.16 EnrollmentRepository.AddAsync(entity)
-                            activate DB
-                            DB-->>Service: 3.17 Success
-                            deactivate DB
-
-                            Service->>DB: 3.18 SaveChangesAsync()
-                            activate DB
-                            DB->>Database: 3.19 Execute INSERT query
-                            activate Database
-                            Database-->>DB: 3.20 Rows affected
-                            deactivate Database
-                            deactivate DB
-
-                            Service->>DB: 3.21 EnrollmentRepository.GetByIdWithDetailsAsync(entity.Id)
-                            activate DB
-                            DB->>Database: 3.22 Execute SELECT with includes
-                            activate Database
-                            Database-->>DB: 3.23 Enrollment entity with details
-                            deactivate Database
-                            deactivate DB
-
-                            Service-->>Endpoint: 3.24 (Succeeded = true, EnrollmentResponse)
+                alt Classroom does not exist
+                    Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Lớp học không tồn tại.")
+                    deactivate Service
+                    Endpoint-->>UI: 3.10.2 400 Bad Request (Tạo ghi danh thất bại.)
+                else Classroom exists
+                    activate Service
+                    alt classroom.Status != "Active"
+                        Service-->>Endpoint: 3.10.3 (Succeeded = false, Error = "Lớp học không đang hoạt động.")
+                        deactivate Service
+                        Endpoint-->>UI: 3.10.4 400 Bad Request (Tạo ghi danh thất bại.)
+                    else Classroom active
+                        activate Service
+                        alt requesterRole == "Teacher" && classroom.UserId != requesterId
+                            Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Giáo viên chỉ có thể ghi danh vào lớp của mình.")
                             deactivate Service
-                            Endpoint-->>UI: 3.25 200 OK (EnrollmentResponse)
+                            Endpoint-->>UI: 3.11.2 400 Bad Request (Tạo ghi danh thất bại.)
+                        else Valid classroom for requester
+                            activate Service
+                            Service->>DB: 3.12 EnrollmentRepository.HasActiveEnrollmentAsync(ChildId, ClassId)
+                            activate DB
+                            DB->>Database: 3.13 Execute SELECT query
+                            activate Database
+                            Database-->>DB: 3.14 Boolean duplicate result
+                            deactivate Database
+                            deactivate DB
+
+                            alt Duplicate active enrollment exists
+                                Service-->>Endpoint: 3.15.1 (Succeeded = false, Error = "Trẻ đã có ghi danh Active trong lớp học này.")
+                                deactivate Service
+                                Endpoint-->>UI: 3.15.2 400 Bad Request (Tạo ghi danh thất bại.)
+                            else Unique enrollment
+                                activate Service
+                                Service->>DB: 3.16 Repository~Enrollment~().AddAsync(entity)
+                                activate DB
+                                DB-->>Service: 3.17 Success
+                                deactivate DB
+
+                                Service->>DB: 3.18 SaveChangesAsync()
+                                activate DB
+                                DB->>Database: 3.19 Execute INSERT query
+                                activate Database
+                                Database-->>DB: 3.20 Rows affected
+                                deactivate Database
+                                deactivate DB
+
+                                Service->>DB: 3.21 EnrollmentRepository.GetByIdWithDetailsAsync(entity.Id)
+                                activate DB
+                                DB->>Database: 3.22 Execute SELECT with includes
+                                activate Database
+                                Database-->>DB: 3.23 Enrollment entity with details
+                                deactivate Database
+                                deactivate DB
+
+                                Service-->>Endpoint: 3.24 (Succeeded = true, EnrollmentResponse)
+                                deactivate Service
+                                Endpoint-->>UI: 3.25 200 OK (EnrollmentResponse)
+                            end
                         end
                     end
                 end

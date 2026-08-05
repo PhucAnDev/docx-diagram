@@ -13,84 +13,98 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/enrollments/{id} (UpdateEnrollmentRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
-        Endpoint->>Service: 3.1 UpdateEnrollmentAsync(id, request, requesterId, requesterRole)
-        activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid enrollment id.)
+    else id > 0
+        alt request is null
+            Endpoint-->>UI: 2.3 400 Bad Request (Request body is required.)
+        else request is not null
+            Endpoint->>Service: 3.1 UpdateEnrollmentAsync(id, request, requesterId, requesterRole)
+            activate Service
 
-        Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
-        activate DB
-        DB->>Database: 3.3 Execute SELECT query
-        activate Database
-        Database-->>DB: 3.4 Enrollment entity or null
-        deactivate Database
-        deactivate DB
+            Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
+            activate DB
+            DB->>Database: 3.3 Execute SELECT query
+            activate Database
+            Database-->>DB: 3.4 Enrollment entity or null
+            deactivate Database
+            deactivate DB
 
-        alt Enrollment not found
-            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-            Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
-        else Enrollment exists
-            alt Status invalid
-                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Trạng thái không hợp lệ.")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Trạng thái không hợp lệ.)
-            else Status valid
-                Service->>DB: 3.7 ClassroomRepository.GetFirstOrDefaultAsync(c => c.Id == request.ClassId && !c.IsDeleted)
-                activate DB
-                DB->>Database: 3.8 Execute SELECT query
-                activate Database
-                Database-->>DB: 3.9 Classroom entity or null
-                deactivate Database
-                deactivate DB
+            alt Enrollment not found
+                Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+                deactivate Service
+                Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
+            else Enrollment exists
+                activate Service
+                alt Status invalid
+                    Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Trạng thái không hợp lệ.")
+                    deactivate Service
+                    Endpoint-->>UI: 3.6.2 400 Bad Request (Cập nhật ghi danh thất bại.)
+                else Status valid
+                    activate Service
+                    Service->>DB: 3.7 Repository~Classroom~().GetFirstOrDefaultAsync(c => c.Id == request.ClassId && !c.IsDeleted)
+                    activate DB
+                    DB->>Database: 3.8 Execute SELECT query
+                    activate Database
+                    Database-->>DB: 3.9 Classroom entity or null
+                    deactivate Database
+                    deactivate DB
 
-                alt Classroom not found
-                    Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Lớp học không tồn tại.")
-                    Endpoint-->>UI: 3.10.2 400 Bad Request (Lớp học không tồn tại.)
-                else Classroom exists
-                    alt Requester is Teacher and not Class Owner (classroom.UserId != requesterId)
-                        Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Giáo viên chỉ có thể cập nhật trong lớp học của mình.")
-                        Endpoint-->>UI: 3.11.2 400 Bad Request (Giáo viên chỉ có thể...)
-                    else Requester valid
-                        alt ClassId or ChildId changed
-                            Service->>DB: 3.12 EnrollmentRepository.HasActiveEnrollmentAsync(request.ChildId, request.ClassId, excludeId: id)
+                    alt Classroom not found
+                        Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Lớp học không tồn tại.")
+                        deactivate Service
+                        Endpoint-->>UI: 3.10.2 400 Bad Request (Cập nhật ghi danh thất bại.)
+                    else Classroom exists
+                        activate Service
+                        alt Requester is Teacher and not Class Owner (classroom.UserId != requesterId)
+                            Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Giáo viên chỉ có thể cập nhật trong lớp học của mình.")
+                            deactivate Service
+                            Endpoint-->>UI: 3.11.2 400 Bad Request (Cập nhật ghi danh thất bại.)
+                        else Requester valid
+                            activate Service
+                            alt ClassId or ChildId changed
+                                Service->>DB: 3.12 EnrollmentRepository.HasActiveEnrollmentAsync(request.ChildId, request.ClassId, excludeId: id)
+                                activate DB
+                                DB->>Database: 3.13 Execute duplicate check SELECT
+                                activate Database
+                                Database-->>DB: 3.14 Duplicate check result (true/false)
+                                deactivate Database
+                                deactivate DB
+
+                                alt Duplicate Active enrollment exists
+                                    Service-->>Endpoint: 3.15.1 (Succeeded = false, Error = "Trẻ đã có ghi danh Active trong lớp này.")
+                                    deactivate Service
+                                    Endpoint-->>UI: 3.15.2 400 Bad Request (Cập nhật ghi danh thất bại.)
+                                else Unique
+                                    activate Service
+                                    note over Service: Set fields
+                                end
+                            else No ClassId or ChildId change
+                                note over Service: Set fields
+                            end
+
+                            note over Service: entity.UpdatedAt = DateTime.UtcNow
+                            Service->>DB: 3.16 Repository~Enrollment~().Update(entity)
+                            Service->>DB: 3.17 SaveChangesAsync()
                             activate DB
-                            DB->>Database: 3.13 Execute duplicate check SELECT
+                            DB->>Database: 3.18 Execute UPDATE query
                             activate Database
-                            Database-->>DB: 3.14 Duplicate check result (true/false)
+                            Database-->>DB: 3.19 Rows affected
                             deactivate Database
                             deactivate DB
 
-                            alt Duplicate Active enrollment exists
-                                Service-->>Endpoint: 3.15.1 (Succeeded = false, Error = "Trẻ đã có ghi danh Active trong lớp này.")
-                                Endpoint-->>UI: 3.15.2 400 Bad Request (Trẻ đã có...)
-                            else Unique
-                                note over Service: Set fields
-                            end
-                        else No ClassId or ChildId change
-                            note over Service: Set fields
+                            Service->>DB: 3.20 EnrollmentRepository.GetByIdWithDetailsAsync(id)
+                            activate DB
+                            DB->>Database: 3.21 Execute SELECT with details
+                            activate Database
+                            Database-->>DB: 3.22 Updated Enrollment details
+                            deactivate Database
+                            deactivate DB
+
+                            Service-->>Endpoint: 3.23 (Succeeded = true, EnrollmentResponse)
+                            deactivate Service
+                            Endpoint-->>UI: 3.24 200 OK (EnrollmentResponse)
                         end
-
-                        note over Service: entity.UpdatedAt = DateTime.UtcNow
-                        Service->>DB: 3.16 EnrollmentRepository.Update(entity)
-                        Service->>DB: 3.17 SaveChangesAsync()
-                        activate DB
-                        DB->>Database: 3.18 Execute UPDATE query
-                        activate Database
-                        Database-->>DB: 3.19 Rows affected
-                        deactivate Database
-                        deactivate DB
-
-                        Service->>DB: 3.20 EnrollmentRepository.GetByIdWithDetailsAsync(id)
-                        activate DB
-                        DB->>Database: 3.21 Execute SELECT with details
-                        activate Database
-                        Database-->>DB: 3.22 Updated Enrollment details
-                        deactivate Database
-                        deactivate DB
-
-                        Service-->>Endpoint: 3.23 (Succeeded = true, EnrollmentResponse)
-                        deactivate Service
-                        Endpoint-->>UI: 3.24 200 OK (EnrollmentResponse)
                     end
                 end
             end

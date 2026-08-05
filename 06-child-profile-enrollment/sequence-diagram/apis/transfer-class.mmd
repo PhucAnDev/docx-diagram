@@ -13,82 +13,98 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/enrollments/{id}/transfer (TransferEnrollmentRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
-        Endpoint->>Service: 3.1 TransferEnrollmentAsync(id, request, requesterId, requesterRole)
-        activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid enrollment id.)
+    else id > 0
+        alt request is null
+            Endpoint-->>UI: 2.3 400 Bad Request (Request body is required.)
+        else request is not null
+            Endpoint->>Service: 3.1 TransferEnrollmentAsync(id, request, requesterId, requesterRole)
+            activate Service
 
-        Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
-        activate DB
-        DB->>Database: 3.3 Execute SELECT query
-        activate Database
-        Database-->>DB: 3.4 Enrollment entity or null
-        deactivate Database
-        deactivate DB
+            Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
+            activate DB
+            DB->>Database: 3.3 Execute SELECT query
+            activate Database
+            Database-->>DB: 3.4 Enrollment entity or null
+            deactivate Database
+            deactivate DB
 
-        alt Enrollment not found
-            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-            Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
-        else Enrollment exists
-            alt Enrollment Status is not Active
-                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Chỉ có thể chuyển lớp cho ghi danh đang Active.")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Chỉ có thể chuyển lớp...)
-            else Status is Active
-                Service->>DB: 3.7 ClassroomRepository.GetFirstOrDefaultAsync(c => c.Id == request.NewClassId && !c.IsDeleted)
-                activate DB
-                DB->>Database: 3.8 Execute SELECT query
-                activate Database
-                Database-->>DB: 3.9 Classroom entity or null
-                deactivate Database
-                deactivate DB
+            alt Enrollment not found
+                Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+                deactivate Service
+                Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
+            else Enrollment exists
+                activate Service
+                alt Enrollment Status is not Active
+                    Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Chỉ có thể chuyển lớp cho ghi danh đang Active.")
+                    deactivate Service
+                    Endpoint-->>UI: 3.6.2 400 Bad Request (Chuyển lớp thất bại.)
+                else Status is Active
+                    activate Service
+                    Service->>DB: 3.7 Repository~Classroom~().GetFirstOrDefaultAsync(c => c.Id == request.NewClassId && !c.IsDeleted)
+                    activate DB
+                    DB->>Database: 3.8 Execute SELECT query
+                    activate Database
+                    Database-->>DB: 3.9 Classroom entity or null
+                    deactivate Database
+                    deactivate DB
 
-                alt New classroom not found
-                    Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Lớp học mới không tồn tại.")
-                    Endpoint-->>UI: 3.10.2 400 Bad Request (Lớp học mới không tồn tại.)
-                else New classroom exists
-                    alt New classroom status is not Active
-                        Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Lớp học mới không đang hoạt động.")
-                        Endpoint-->>UI: 3.11.2 400 Bad Request (Lớp học mới không...)
-                    else New classroom Active
-                        alt Requester is Teacher and newClassroom.UserId != requesterId
-                            Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Giáo viên chỉ có thể chuyển sang lớp của mình.")
-                            Endpoint-->>UI: 3.12.2 400 Bad Request (Giáo viên chỉ có...)
-                        else Requester valid
-                            Service->>DB: 3.13 EnrollmentRepository.HasActiveEnrollmentAsync(entity.ChildId, request.NewClassId, excludeId: id)
-                            activate DB
-                            DB->>Database: 3.14 Execute duplicate check SELECT
-                            activate Database
-                            Database-->>DB: 3.15 Duplicate check result (true/false)
-                            deactivate Database
-                            deactivate DB
-
-                            alt Duplicate Active enrollment exists in new class
-                                Service-->>Endpoint: 3.16.1 (Succeeded = false, Error = "Trẻ đã có ghi danh Active trong lớp mới này.")
-                                Endpoint-->>UI: 3.16.2 400 Bad Request (Trẻ đã có...)
-                            else Unique
-                                note over Service: entity.ClassId = request.NewClassId<br/>entity.UpdatedAt = DateTime.UtcNow
-                                
-                                Service->>DB: 3.17 EnrollmentRepository.Update(entity)
-                                Service->>DB: 3.18 SaveChangesAsync()
-                                activate DB
-                                DB->>Database: 3.19 Execute UPDATE query
-                                activate Database
-                                Database-->>DB: 3.20 Rows affected
-                                deactivate Database
-                                deactivate DB
-
-                                Service->>DB: 3.21 EnrollmentRepository.GetByIdWithDetailsAsync(id)
-                                activate DB
-                                DB->>Database: 3.22 Execute SELECT with details
-                                activate Database
-                                Database-->>DB: 3.23 Updated Enrollment details
-                                deactivate Database
-                                deactivate DB
-
-                                Service-->>Endpoint: 3.24 (Succeeded = true, EnrollmentResponse)
+                    alt New classroom not found
+                        Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Lớp học mới không tồn tại.")
+                        deactivate Service
+                        Endpoint-->>UI: 3.10.2 400 Bad Request (Chuyển lớp thất bại.)
+                    else New classroom exists
+                        activate Service
+                        alt New classroom status is not Active
+                            Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Lớp học mới không đang hoạt động.")
+                            deactivate Service
+                            Endpoint-->>UI: 3.11.2 400 Bad Request (Chuyển lớp thất bại.)
+                        else New classroom Active
+                            activate Service
+                            alt Requester is Teacher and newClassroom.UserId != requesterId
+                                Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Giáo viên chỉ có thể chuyển sang lớp của mình.")
                                 deactivate Service
-                                Endpoint-->>UI: 3.25 200 OK (EnrollmentResponse)
+                                Endpoint-->>UI: 3.12.2 400 Bad Request (Chuyển lớp thất bại.)
+                            else Requester valid
+                                activate Service
+                                Service->>DB: 3.13 EnrollmentRepository.HasActiveEnrollmentAsync(entity.ChildId, request.NewClassId, excludeId: id)
+                                activate DB
+                                DB->>Database: 3.14 Execute duplicate check SELECT
+                                activate Database
+                                Database-->>DB: 3.15 Duplicate check result (true/false)
+                                deactivate Database
+                                deactivate DB
+
+                                alt Duplicate Active enrollment exists in new class
+                                    Service-->>Endpoint: 3.16.1 (Succeeded = false, Error = "Trẻ đã có ghi danh Active trong lớp mới này.")
+                                    deactivate Service
+                                    Endpoint-->>UI: 3.16.2 400 Bad Request (Chuyển lớp thất bại.)
+                                else Unique
+                                    activate Service
+                                    note over Service: entity.ClassId = request.NewClassId<br/>entity.UpdatedAt = DateTime.UtcNow
+                                    
+                                    Service->>DB: 3.17 Repository~Enrollment~().Update(entity)
+                                    Service->>DB: 3.18 SaveChangesAsync()
+                                    activate DB
+                                    DB->>Database: 3.19 Execute UPDATE query
+                                    activate Database
+                                    Database-->>DB: 3.20 Rows affected
+                                    deactivate Database
+                                    deactivate DB
+
+                                    Service->>DB: 3.21 EnrollmentRepository.GetByIdWithDetailsAsync(id)
+                                    activate DB
+                                    DB->>Database: 3.22 Execute SELECT with details
+                                    activate Database
+                                    Database-->>DB: 3.23 Updated Enrollment details
+                                    deactivate Database
+                                    deactivate DB
+
+                                    Service-->>Endpoint: 3.24 (Succeeded = true, EnrollmentResponse)
+                                    deactivate Service
+                                    Endpoint-->>UI: 3.25 200 OK (EnrollmentResponse)
+                                end
                             end
                         end
                     end

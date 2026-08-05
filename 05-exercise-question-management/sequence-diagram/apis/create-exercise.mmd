@@ -13,91 +13,101 @@ sequenceDiagram
     UI->>Endpoint: 2.1 POST /api/exercises (CreateExerciseRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
-        Endpoint->>Service: 3.1 CreateAsync(request)
-        activate Service
+    Endpoint->>Service: 3.1 CreateAsync(request)
+    activate Service
 
-        alt DurationLimit <= 0 (BR-67)
-            Service-->>Endpoint: 3.2.1 (Succeeded = false, Error = "Giới hạn thời gian phải lớn hơn 0.")
-            Endpoint-->>UI: 3.2.2 400 Bad Request (Giới hạn thời gian...)
-        else DurationLimit > 0
-            alt DifficultyLevel invalid (BR-68)
-                Service-->>Endpoint: 3.3.1 (Succeeded = false, Error = "Mức độ khó không hợp lệ.")
-                Endpoint-->>UI: 3.3.2 400 Bad Request (Mức độ khó...)
-            else DifficultyLevel valid
-                alt Status == "Active" (BR-70)
-                    Service-->>Endpoint: 3.4.1 (Succeeded = false, Error = "Không thể trực tiếp kiến tạo bài tập trạng thái Hoạt động...")
-                    Endpoint-->>UI: 3.4.2 400 Bad Request (Không thể trực tiếp...)
-                else Status != "Active"
-                    Service->>DB: 3.5 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.TeacherId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
+    alt DurationLimit <= 0 (BR-67)
+        Service-->>Endpoint: 3.2.1 (Succeeded = false, Error = "Giới hạn thời gian phải lớn hơn 0.")
+        deactivate Service
+        Endpoint-->>UI: 3.2.2 400 Bad Request (Create failed.)
+    else DurationLimit > 0
+        activate Service
+        alt DifficultyLevel invalid (BR-68)
+            Service-->>Endpoint: 3.3.1 (Succeeded = false, Error = "Mức độ khó phải thuộc một trong các giá trị: Easy, Medium, Hard.")
+            deactivate Service
+            Endpoint-->>UI: 3.3.2 400 Bad Request (Create failed.)
+        else DifficultyLevel valid
+            activate Service
+            alt Status == "Active" (BR-70)
+                Service-->>Endpoint: 3.4.1 (Succeeded = false, Error = "Không thể trực tiếp kiến tạo bài tập trạng thái Hoạt động...")
+                deactivate Service
+                Endpoint-->>UI: 3.4.2 400 Bad Request (Create failed.)
+            else Status != "Active"
+                activate Service
+                Service->>DB: 3.5 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.TeacherId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
+                activate DB
+                DB->>Database: 3.6 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.7 Teacher entity or null
+                deactivate Database
+                deactivate DB
+
+                alt Teacher not found/inactive/not Teacher (BR-56)
+                    Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Không tìm thấy giáo viên...")
+                    deactivate Service
+                    Endpoint-->>UI: 3.8.2 400 Bad Request (Create failed.)
+                else Teacher valid
+                    activate Service
+                    Service->>DB: 3.9 LessonRepository.GetFirstOrDefaultAsync(l => l.Id == request.LessonId && !l.IsDeleted && l.Status == "Active", includeProperties: "Program")
                     activate DB
-                    DB->>Database: 3.6 Execute SELECT query
+                    DB->>Database: 3.10 Execute SELECT query
                     activate Database
-                    Database-->>DB: 3.7 Teacher entity or null
+                    Database-->>DB: 3.11 Lesson entity or null
                     deactivate Database
                     deactivate DB
 
-                    alt Teacher not found/inactive/not Teacher (BR-56)
-                        Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Không tìm thấy giáo viên...")
-                        Endpoint-->>UI: 3.8.2 400 Bad Request (Không tìm thấy giáo viên...)
-                    else Teacher valid
-                        Service->>DB: 3.9 LessonRepository.GetFirstOrDefaultAsync(l => l.Id == request.LessonId && !l.IsDeleted && l.Status == "Active", includeProperties: "Program")
-                        activate DB
-                        DB->>Database: 3.10 Execute SELECT query
-                        activate Database
-                        Database-->>DB: 3.11 Lesson entity or null
-                        deactivate Database
-                        deactivate DB
+                    alt Lesson not found/inactive (BR-62/63)
+                        Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Không tìm thấy bài học...")
+                        deactivate Service
+                        Endpoint-->>UI: 3.12.2 400 Bad Request (Create failed.)
+                    else Lesson valid
+                        activate Service
+                        alt Program of Lesson not found/inactive (BR-63)
+                            Service-->>Endpoint: 3.13.1 (Succeeded = false, Error = "Chương trình học... không hoạt động.")
+                            deactivate Service
+                            Endpoint-->>UI: 3.13.2 400 Bad Request (Create failed.)
+                        else Program valid
+                            activate Service
+                            Service->>DB: 3.14 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.Id == request.TypeId && !t.IsDeleted && t.IsActive)
+                            activate DB
+                            DB->>Database: 3.15 Execute SELECT query
+                            activate Database
+                            Database-->>DB: 3.16 ExerciseType or null
+                            deactivate Database
+                            deactivate DB
 
-                        alt Lesson not found/inactive (BR-62/63)
-                            Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Không tìm thấy bài học...")
-                            Endpoint-->>UI: 3.12.2 400 Bad Request (Không tìm thấy bài học...)
-                        else Lesson valid
-                            alt Program of Lesson not found/inactive (BR-63)
-                                Service-->>Endpoint: 3.13.1 (Succeeded = false, Error = "Chương trình học... không hoạt động.")
-                                Endpoint-->>UI: 3.13.2 400 Bad Request (Chương trình học...)
-                            else Program valid
-                                Service->>DB: 3.14 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.Id == request.TypeId && !t.IsDeleted && t.IsActive)
+                            alt ExerciseType not found/inactive (BR-66)
+                                Service-->>Endpoint: 3.17.1 (Succeeded = false, Error = "Không tìm thấy loại bài tập...")
+                                deactivate Service
+                                Endpoint-->>UI: 3.17.2 400 Bad Request (Create failed.)
+                            else ExerciseType valid
+                                activate Service
+                                note over Service: Create Exercise entity
+                                
+                                Service->>DB: 3.18 ExerciseRepository.AddAsync(entity)
                                 activate DB
-                                DB->>Database: 3.15 Execute SELECT query
+                                DB-->>Service: 3.19 Success
+                                deactivate DB
+
+                                Service->>DB: 3.20 SaveChangesAsync()
+                                activate DB
+                                DB->>Database: 3.21 Execute INSERT query
                                 activate Database
-                                Database-->>DB: 3.16 ExerciseType or null
+                                Database-->>DB: 3.22 Rows affected
                                 deactivate Database
                                 deactivate DB
 
-                                alt ExerciseType not found/inactive (BR-66)
-                                    Service-->>Endpoint: 3.17.1 (Succeeded = false, Error = "Không tìm thấy loại bài tập...")
-                                    Endpoint-->>UI: 3.17.2 400 Bad Request (Không tìm thấy loại bài tập...)
-                                else ExerciseType valid
-                                    note over Service: Create Exercise entity
-                                    
-                                    Service->>DB: 3.18 ExerciseRepository.AddAsync(entity)
-                                    activate DB
-                                    DB-->>Service: 3.19 Success
-                                    deactivate DB
+                                Service->>DB: 3.23 ExerciseRepository.GetFirstOrDefaultAsync(e => e.Id == entity.Id, includeProperties: "Teacher,Lesson,Lesson.Program,ExerciseType,ExerciseQuestions")
+                                activate DB
+                                DB->>Database: 3.24 Execute SELECT with includes
+                                activate Database
+                                Database-->>DB: 3.25 Created Exercise with details
+                                deactivate Database
+                                deactivate DB
 
-                                    Service->>DB: 3.20 SaveChangesAsync()
-                                    activate DB
-                                    DB->>Database: 3.21 Execute INSERT query
-                                    activate Database
-                                    Database-->>DB: 3.22 Rows affected
-                                    deactivate Database
-                                    deactivate DB
-
-                                    Service->>DB: 3.23 ExerciseRepository.GetFirstOrDefaultAsync(e => e.Id == entity.Id, includeProperties: "Teacher,Lesson,Lesson.Program,ExerciseType,ExerciseQuestions")
-                                    activate DB
-                                    DB->>Database: 3.24 Execute SELECT with includes
-                                    activate Database
-                                    Database-->>DB: 3.25 Created Exercise with details
-                                    deactivate Database
-                                    deactivate DB
-
-                                    Service-->>Endpoint: 3.26 (Succeeded = true, ExerciseResponse)
-                                    deactivate Service
-                                    Endpoint-->>UI: 3.27 200 OK (ExerciseResponse)
-                                end
+                                Service-->>Endpoint: 3.26 (Succeeded = true, ExerciseResponse)
+                                deactivate Service
+                                Endpoint-->>UI: 3.27 200 OK (ExerciseResponse)
                             end
                         end
                     end

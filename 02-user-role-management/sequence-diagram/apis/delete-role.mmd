@@ -32,6 +32,7 @@ sequenceDiagram
             deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
         else Role exists
+            activate Service
             note over Service: role.IsDeleted = true<br/>role.IsActive = false<br/>role.DeletedAt = DateTime.UtcNow<br/>role.UpdatedAt = DateTime.UtcNow
 
             Service->>DB: 3.6 RoleRepository.Update(role)

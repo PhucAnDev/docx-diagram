@@ -32,6 +32,7 @@ sequenceDiagram
             deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
         else Role exists
+            activate Service
             alt RoleName is updated and unique check fails
                 Service->>DB: 3.6 RoleRepository.ExistsAsync(r => r.RoleName == request.RoleName && r.Id != id && !r.IsDeleted)
                 activate DB
@@ -47,6 +48,7 @@ sequenceDiagram
                     Endpoint-->>UI: 3.9.2 400 Bad Request (Update role failed.)
                 end
             else RoleName valid or not updated
+                activate Service
                 note over Service: Update role fields (RoleName, Description, IsActive)<br/>role.UpdatedAt = DateTime.UtcNow
                 
                 Service->>DB: 3.10 RoleRepository.Update(role)

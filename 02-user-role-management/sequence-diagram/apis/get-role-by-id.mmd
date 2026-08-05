@@ -32,6 +32,7 @@ sequenceDiagram
             deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
         else Role exists
+            activate Service
             Service-->>Endpoint: 3.6.1 RoleResponse
             deactivate Service
             Endpoint-->>UI: 3.6.2 200 OK (RoleResponse)

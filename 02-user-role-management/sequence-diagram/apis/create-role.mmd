@@ -29,6 +29,7 @@ sequenceDiagram
         deactivate Service
         Endpoint-->>UI: 3.5.2 400 Bad Request (Create role failed.)
     else Role is unique
+        activate Service
         note over Service: Create Role entity with RoleName, Description, IsActive = true
         
         Service->>DB: 3.6 RoleRepository.AddAsync(role)

@@ -32,6 +32,7 @@ sequenceDiagram
             deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
         else User exists
+            activate Service
             opt Email is updated
                 Service->>DB: 3.6 UserRepository.ExistsAsync(u => u.Email == request.Email && u.Id != id && !u.IsDeleted)
                 activate DB
@@ -57,6 +58,7 @@ sequenceDiagram
                 deactivate Service
                 Endpoint-->>UI: 3.12.2 400 Bad Request (Update user failed.)
             else Valid input
+                activate Service
                 note over Service: Update remaining user fields (Avatar, FullName, Gender, Specialty, Phone, IsActive)<br/>user.UpdatedAt = DateTime.UtcNow
                 
                 Service->>DB: 3.13 UserRepository.Update(user)

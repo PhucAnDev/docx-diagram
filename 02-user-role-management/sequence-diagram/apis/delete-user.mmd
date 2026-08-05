@@ -13,39 +13,43 @@ sequenceDiagram
     UI->>Endpoint: 2.1 DELETE /api/Users/{id}
     activate Endpoint
 
-    Endpoint->>Service: 3.1 DeleteUserAsync(id)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid user id.)
+    else id > 0
+        Endpoint->>Service: 3.1 DeleteUserAsync(id)
+        activate Service
 
-    Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 User entity or null
-    deactivate Database
-    deactivate DB
-
-    alt User not found (user == null)
-        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-        Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
-    else User exists
-        note over Service: user.IsDeleted = true<br/>user.DeletedAt = DateTime.UtcNow<br/>user.UpdatedAt = DateTime.UtcNow
-
-        Service->>DB: 3.6 UserRepository.Update(user)
+        Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
         activate DB
-        DB-->>Service: 3.7 Success
-        deactivate DB
-
-        Service->>DB: 3.8 SaveChangesAsync()
-        activate DB
-        DB->>Database: 3.9 Execute UPDATE query
+        DB->>Database: 3.3 Execute SELECT query
         activate Database
-        Database-->>DB: 3.10 Rows affected
+        Database-->>DB: 3.4 User entity or null
         deactivate Database
         deactivate DB
 
-        Service-->>Endpoint: 3.11 (Succeeded = true)
-        deactivate Service
-        Endpoint-->>UI: 3.12 200 OK (User deleted successfully.)
+        alt User not found (user == null)
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
+        else User exists
+            note over Service: user.IsDeleted = true<br/>user.DeletedAt = DateTime.UtcNow<br/>user.UpdatedAt = DateTime.UtcNow
+
+            Service->>DB: 3.6 UserRepository.Update(user)
+            activate DB
+            DB-->>Service: 3.7 Success
+            deactivate DB
+
+            Service->>DB: 3.8 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.9 Execute UPDATE query
+            activate Database
+            Database-->>DB: 3.10 Rows affected
+            deactivate Database
+            deactivate DB
+
+            Service-->>Endpoint: 3.11 (Succeeded = true)
+            deactivate Service
+            Endpoint-->>UI: 3.12 200 OK (User deleted.)
+        end
     end
     deactivate Endpoint
     deactivate UI

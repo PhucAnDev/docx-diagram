@@ -13,24 +13,28 @@ sequenceDiagram
     UI->>Endpoint: 2.1 GET /api/Users/{id}
     activate Endpoint
 
-    Endpoint->>Service: 3.1 GetUserByIdAsync(id)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid user id.)
+    else id > 0
+        Endpoint->>Service: 3.1 GetUserByIdAsync(id)
+        activate Service
 
-    Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, includeProperties: "Role", tracked: false)
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 User entity with Role or null
-    deactivate Database
-    deactivate DB
+        Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, includeProperties: "Role", tracked: false)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 User entity with Role or null
+        deactivate Database
+        deactivate DB
 
-    alt User not found (user == null)
-        Service-->>Endpoint: 3.5.1 null
-        Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
-    else User exists
-        Service-->>Endpoint: 3.6.1 UserResponse
-        deactivate Service
-        Endpoint-->>UI: 3.6.2 200 OK (UserResponse)
+        alt User not found (user == null)
+            Service-->>Endpoint: 3.5.1 null
+            Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
+        else User exists
+            Service-->>Endpoint: 3.6.1 UserResponse
+            deactivate Service
+            Endpoint-->>UI: 3.6.2 200 OK (UserResponse)
+        end
     end
     deactivate Endpoint
     deactivate UI

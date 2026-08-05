@@ -13,53 +13,57 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/Roles/{id} (UpdateRoleRequest)
     activate Endpoint
 
-    Endpoint->>Service: 3.1 UpdateRoleAsync(id, request)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid role id.)
+    else id > 0
+        Endpoint->>Service: 3.1 UpdateRoleAsync(id, request)
+        activate Service
 
-    Service->>DB: 3.2 RoleRepository.GetFirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted)
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 Role entity or null
-    deactivate Database
-    deactivate DB
+        Service->>DB: 3.2 RoleRepository.GetFirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 Role entity or null
+        deactivate Database
+        deactivate DB
 
-    alt Role not found (role == null)
-        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-        Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
-    else Role exists
-        alt RoleName is updated and unique check fails
-            Service->>DB: 3.6 RoleRepository.ExistsAsync(r => r.RoleName == request.RoleName && r.Id != id && !r.IsDeleted)
-            activate DB
-            DB->>Database: 3.7 Execute SELECT count query
-            activate Database
-            Database-->>DB: 3.8 Role exists boolean
-            deactivate Database
-            deactivate DB
+        alt Role not found (role == null)
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
+        else Role exists
+            alt RoleName is updated and unique check fails
+                Service->>DB: 3.6 RoleRepository.ExistsAsync(r => r.RoleName == request.RoleName && r.Id != id && !r.IsDeleted)
+                activate DB
+                DB->>Database: 3.7 Execute SELECT count query
+                activate Database
+                Database-->>DB: 3.8 Role exists boolean
+                deactivate Database
+                deactivate DB
 
-            alt Role already exists
-                Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Role ... already exists.")
-                Endpoint-->>UI: 3.9.2 400 Bad Request (Role already exists.)
+                alt Role already exists
+                    Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Role already exists.")
+                    Endpoint-->>UI: 3.9.2 400 Bad Request (Update role failed.)
+                end
+            else RoleName valid or not updated
+                note over Service: Update role fields (RoleName, Description, IsActive)<br/>role.UpdatedAt = DateTime.UtcNow
+                
+                Service->>DB: 3.10 RoleRepository.Update(role)
+                activate DB
+                DB-->>Service: 3.11 Success
+                deactivate DB
+
+                Service->>DB: 3.12 SaveChangesAsync()
+                activate DB
+                DB->>Database: 3.13 Execute UPDATE query
+                activate Database
+                Database-->>DB: 3.14 Rows affected
+                deactivate Database
+                deactivate DB
+
+                Service-->>Endpoint: 3.15 (Succeeded = true, RoleResponse)
+                deactivate Service
+                Endpoint-->>UI: 3.16 200 OK (Role updated.)
             end
-        else RoleName valid or not updated
-            note over Service: Update role fields (RoleName, Description, IsActive)<br/>role.UpdatedAt = DateTime.UtcNow
-            
-            Service->>DB: 3.10 RoleRepository.Update(role)
-            activate DB
-            DB-->>Service: 3.11 Success
-            deactivate DB
-
-            Service->>DB: 3.12 SaveChangesAsync()
-            activate DB
-            DB->>Database: 3.13 Execute UPDATE query
-            activate Database
-            Database-->>DB: 3.14 Rows affected
-            deactivate Database
-            deactivate DB
-
-            Service-->>Endpoint: 3.15 (Succeeded = true, RoleResponse)
-            deactivate Service
-            Endpoint-->>UI: 3.16 200 OK (RoleResponse)
         end
     end
     deactivate Endpoint

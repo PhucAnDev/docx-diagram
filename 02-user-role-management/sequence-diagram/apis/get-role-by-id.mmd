@@ -1,36 +1,40 @@
 %%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
 sequenceDiagram
     title GET /api/Roles/{id}
-    actor Admin as Admin
+    actor User as User
     participant UI as GetRoleByIdUI
     participant Endpoint as :RolesController
     participant Service as :RoleService
     participant DB as :UnitOfWork
     participant Database as :Database
 
-    Admin->>UI: 1.1 Yêu cầu hiển thị chi tiết vai trò
+    User->>UI: 1.1 Yêu cầu hiển thị chi tiết vai trò
     activate UI
     UI->>Endpoint: 2.1 GET /api/Roles/{id}
     activate Endpoint
 
-    Endpoint->>Service: 3.1 GetRoleByIdAsync(id)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid role id.)
+    else id > 0
+        Endpoint->>Service: 3.1 GetRoleByIdAsync(id)
+        activate Service
 
-    Service->>DB: 3.2 RoleRepository.GetFirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted, tracked: false)
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 Role entity or null
-    deactivate Database
-    deactivate DB
+        Service->>DB: 3.2 RoleRepository.GetFirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted, tracked: false)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 Role entity or null
+        deactivate Database
+        deactivate DB
 
-    alt Role not found (role == null)
-        Service-->>Endpoint: 3.5.1 null
-        Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
-    else Role exists
-        Service-->>Endpoint: 3.6.1 RoleResponse
-        deactivate Service
-        Endpoint-->>UI: 3.6.2 200 OK (RoleResponse)
+        alt Role not found (role == null)
+            Service-->>Endpoint: 3.5.1 null
+            Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
+        else Role exists
+            Service-->>Endpoint: 3.6.1 RoleResponse
+            deactivate Service
+            Endpoint-->>UI: 3.6.2 200 OK (RoleResponse)
+        end
     end
     deactivate Endpoint
     deactivate UI

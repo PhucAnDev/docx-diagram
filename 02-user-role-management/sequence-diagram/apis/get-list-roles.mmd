@@ -1,14 +1,14 @@
 %%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
 sequenceDiagram
     title GET /api/Roles
-    actor Admin as Admin
+    actor User as User
     participant UI as GetListRolesUI
     participant Endpoint as :RolesController
     participant Service as :RoleService
     participant DB as :UnitOfWork
     participant Database as :Database
 
-    Admin->>UI: 1.1 Yêu cầu hiển thị danh sách vai trò
+    User->>UI: 1.1 Yêu cầu hiển thị danh sách vai trò
     activate UI
     UI->>Endpoint: 2.1 GET /api/Roles (pageNumber, pageSize)
     activate Endpoint

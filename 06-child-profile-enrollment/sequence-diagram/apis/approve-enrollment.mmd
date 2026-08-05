@@ -13,55 +13,65 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/Enrollments/{id}/approve
     activate Endpoint
 
-    Endpoint->>Service: 3.1 ApproveEnrollmentAsync(id, requesterId, requesterRole)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid enrollment id.)
+    else id > 0
+        Endpoint->>Service: 3.1 ApproveEnrollmentAsync(id, requesterId, requesterRole)
+        activate Service
 
-    Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
-    activate DB
-    DB->>Database: 3.3 Execute SELECT with includes
-    activate Database
-    Database-->>DB: 3.4 Enrollment entity with details or null
-    deactivate Database
-    deactivate DB
+        Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT with includes
+        activate Database
+        Database-->>DB: 3.4 Enrollment entity with details or null
+        deactivate Database
+        deactivate DB
 
-    alt Enrollment not found (entity == null)
-        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-        Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
-    else Enrollment exists
-        alt Enrollment.Status != "Pending"
-            Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Chỉ có thể duyệt ghi danh đang ở trạng thái Chờ duyệt.")
-            Endpoint-->>UI: 3.6.2 400 Bad Request (Chỉ có thể duyệt...)
-        else Enrollment is Pending
-            alt requesterRole == "Teacher" && entity.Classroom.UserId != requesterId
-                Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Giáo viên chỉ có thể duyệt ghi danh trong lớp học của mình.")
-                Endpoint-->>UI: 3.7.2 400 Bad Request (Giáo viên chỉ có thể...)
-            else Valid authorization to approve
-                note over Service: entity.Status = "Active", entity.UpdatedAt = DateTime.UtcNow
-                
-                Service->>DB: 3.8 EnrollmentRepository.Update(entity)
-                activate DB
-                DB-->>Service: 3.9 Success
-                deactivate DB
-
-                Service->>DB: 3.10 SaveChangesAsync()
-                activate DB
-                DB->>Database: 3.11 Execute UPDATE query
-                activate Database
-                Database-->>DB: 3.12 Rows affected
-                deactivate Database
-                deactivate DB
-
-                Service->>DB: 3.13 EnrollmentRepository.GetByIdWithDetailsAsync(entity.Id)
-                activate DB
-                DB->>Database: 3.14 Execute SELECT with includes
-                activate Database
-                Database-->>DB: 3.15 Updated Enrollment entity with details
-                deactivate Database
-                deactivate DB
-
-                Service-->>Endpoint: 3.16 (Succeeded = true, EnrollmentResponse)
+        alt Enrollment not found (entity == null)
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            deactivate Service
+            Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
+        else Enrollment exists
+            activate Service
+            alt Enrollment.Status != "Pending"
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Chỉ có thể duyệt ghi danh đang ở trạng thái Chờ duyệt.")
                 deactivate Service
-                Endpoint-->>UI: 3.17 200 OK (EnrollmentResponse)
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Duyệt ghi danh thất bại.)
+            else Enrollment is Pending
+                activate Service
+                alt requesterRole == "Teacher" && entity.Classroom.UserId != requesterId
+                    Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Giáo viên chỉ có thể duyệt ghi danh trong lớp học của mình.")
+                    deactivate Service
+                    Endpoint-->>UI: 3.7.2 400 Bad Request (Duyệt ghi danh thất bại.)
+                else Valid authorization to approve
+                    activate Service
+                    note over Service: entity.Status = "Active", entity.UpdatedAt = DateTime.UtcNow
+                    
+                    Service->>DB: 3.8 Repository~Enrollment~().Update(entity)
+                    activate DB
+                    DB-->>Service: 3.9 Success
+                    deactivate DB
+
+                    Service->>DB: 3.10 SaveChangesAsync()
+                    activate DB
+                    DB->>Database: 3.11 Execute UPDATE query
+                    activate Database
+                    Database-->>DB: 3.12 Rows affected
+                    deactivate Database
+                    deactivate DB
+
+                    Service->>DB: 3.13 EnrollmentRepository.GetByIdWithDetailsAsync(entity.Id)
+                    activate DB
+                    DB->>Database: 3.14 Execute SELECT with includes
+                    activate Database
+                    Database-->>DB: 3.15 Updated Enrollment entity with details
+                    deactivate Database
+                    deactivate DB
+
+                    Service-->>Endpoint: 3.16 (Succeeded = true, EnrollmentResponse)
+                    deactivate Service
+                    Endpoint-->>UI: 3.17 200 OK (EnrollmentResponse)
+                end
             end
         end
     end

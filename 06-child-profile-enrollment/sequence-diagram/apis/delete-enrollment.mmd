@@ -13,35 +13,41 @@ sequenceDiagram
     UI->>Endpoint: 2.1 DELETE /api/enrollments/{id}
     activate Endpoint
 
-    Endpoint->>Service: 3.1 DeleteEnrollmentAsync(id)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid enrollment id.)
+    else id > 0
+        Endpoint->>Service: 3.1 DeleteEnrollmentAsync(id)
+        activate Service
 
-    Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 Enrollment entity or null
-    deactivate Database
-    deactivate DB
-
-    alt Enrollment not found
-        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-        Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
-    else Enrollment exists
-        note over Service: entity.IsDeleted = true<br/>entity.UpdatedAt = DateTime.UtcNow
-        
-        Service->>DB: 3.6 EnrollmentRepository.Update(entity)
-        Service->>DB: 3.7 SaveChangesAsync()
+        Service->>DB: 3.2 EnrollmentRepository.GetByIdWithDetailsAsync(id)
         activate DB
-        DB->>Database: 3.8 Execute UPDATE query
+        DB->>Database: 3.3 Execute SELECT query
         activate Database
-        Database-->>DB: 3.9 Rows affected
+        Database-->>DB: 3.4 Enrollment entity or null
         deactivate Database
         deactivate DB
 
-        Service-->>Endpoint: 3.10 (Succeeded = true)
-        deactivate Service
-        Endpoint-->>UI: 3.11 200 OK (Enrollment deleted successfully.)
+        alt Enrollment not found
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            deactivate Service
+            Endpoint-->>UI: 3.5.2 404 Not Found (Enrollment not found.)
+        else Enrollment exists
+            activate Service
+            note over Service: entity.IsDeleted = true<br/>entity.UpdatedAt = DateTime.UtcNow
+            
+            Service->>DB: 3.6 Repository~Enrollment~().Update(entity)
+            Service->>DB: 3.7 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.8 Execute UPDATE query
+            activate Database
+            Database-->>DB: 3.9 Rows affected
+            deactivate Database
+            deactivate DB
+
+            Service-->>Endpoint: 3.10 (Succeeded = true)
+            deactivate Service
+            Endpoint-->>UI: 3.11 200 OK (Xóa ghi danh thành công.)
+        end
     end
     deactivate Endpoint
     deactivate UI

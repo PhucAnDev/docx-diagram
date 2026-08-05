@@ -13,9 +13,9 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/exercises/{id} (UpdateExerciseRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid id.)
+    else id > 0
         Endpoint->>Service: 3.1 UpdateAsync(id, request)
         activate Service
 
@@ -29,20 +29,28 @@ sequenceDiagram
 
         alt Exercise not found
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Exercise not found.)
         else Exercise exists
+            activate Service
             alt DurationLimit <= 0 (BR-67)
                 Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Giới hạn thời gian phải lớn hơn 0.")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Giới hạn thời gian...)
+                deactivate Service
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Update failed.)
             else DurationLimit > 0
+                activate Service
                 alt DifficultyLevel invalid (BR-68)
-                    Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Mức độ khó không hợp lệ.")
-                    Endpoint-->>UI: 3.7.2 400 Bad Request (Mức độ khó...)
+                    Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Mức độ khó phải thuộc một trong các giá trị: Easy, Medium, Hard.")
+                    deactivate Service
+                    Endpoint-->>UI: 3.7.2 400 Bad Request (Update failed.)
                 else DifficultyLevel valid
+                    activate Service
                     alt Status == "Active" and has no questions (BR-70)
                         Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Không thể kích hoạt bài tập chưa có câu hỏi nào.")
-                        Endpoint-->>UI: 3.8.2 400 Bad Request (Không thể kích hoạt...)
+                        deactivate Service
+                        Endpoint-->>UI: 3.8.2 400 Bad Request (Update failed.)
                     else Status check valid
+                        activate Service
                         Service->>DB: 3.9 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.TeacherId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
                         activate DB
                         DB->>Database: 3.10 Execute SELECT query
@@ -53,8 +61,10 @@ sequenceDiagram
 
                         alt Teacher not found/inactive/not Teacher (BR-56)
                             Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Không tìm thấy giáo viên...")
-                            Endpoint-->>UI: 3.12.2 400 Bad Request (Không tìm thấy giáo viên...)
+                            deactivate Service
+                            Endpoint-->>UI: 3.12.2 400 Bad Request (Update failed.)
                         else Teacher valid
+                            activate Service
                             Service->>DB: 3.13 LessonRepository.GetFirstOrDefaultAsync(l => l.Id == request.LessonId && !l.IsDeleted && l.Status == "Active", includeProperties: "Program")
                             activate DB
                             DB->>Database: 3.14 Execute SELECT query
@@ -65,12 +75,16 @@ sequenceDiagram
 
                             alt Lesson not found/inactive (BR-62/63)
                                 Service-->>Endpoint: 3.16.1 (Succeeded = false, Error = "Không tìm thấy bài học...")
-                                Endpoint-->>UI: 3.16.2 400 Bad Request (Không tìm thấy bài học...)
+                                deactivate Service
+                                Endpoint-->>UI: 3.16.2 400 Bad Request (Update failed.)
                             else Lesson valid
+                                activate Service
                                 alt Program of Lesson not found/inactive (BR-63)
                                     Service-->>Endpoint: 3.17.1 (Succeeded = false, Error = "Chương trình học... không hoạt động.")
-                                    Endpoint-->>UI: 3.17.2 400 Bad Request (Chương trình học...)
+                                    deactivate Service
+                                    Endpoint-->>UI: 3.17.2 400 Bad Request (Update failed.)
                                 else Program valid
+                                    activate Service
                                     Service->>DB: 3.18 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.Id == request.TypeId && !t.IsDeleted && t.IsActive)
                                     activate DB
                                     DB->>Database: 3.19 Execute SELECT query
@@ -81,8 +95,10 @@ sequenceDiagram
 
                                     alt ExerciseType not found/inactive (BR-66)
                                         Service-->>Endpoint: 3.21.1 (Succeeded = false, Error = "Không tìm thấy loại bài tập...")
-                                        Endpoint-->>UI: 3.21.2 400 Bad Request (Không tìm thấy loại bài tập...)
+                                        deactivate Service
+                                        Endpoint-->>UI: 3.21.2 400 Bad Request (Update failed.)
                                     else ExerciseType valid
+                                        activate Service
                                         note over Service: Update Exercise fields<br/>entity.UpdatedAt = DateTime.UtcNow
 
                                         Service->>DB: 3.22 SaveChangesAsync()

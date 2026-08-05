@@ -13,42 +13,46 @@ sequenceDiagram
     UI->>Endpoint: 2.1 DELETE /api/classrooms/{id}
     activate Endpoint
 
-    Endpoint->>Service: 3.1 DeleteClassroomAsync(id)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Mã định danh lớp học không hợp lệ.)
+    else id > 0
+        Endpoint->>Service: 3.1 DeleteClassroomAsync(id)
+        activate Service
 
-    Service->>DB: 3.2 ClassroomRepository.GetFirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted, includeProperties: "Enrollments")
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 Classroom entity or null
-    deactivate Database
-    deactivate DB
+        Service->>DB: 3.2 ClassroomRepository.GetFirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted, includeProperties: "Enrollments")
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 Classroom entity or null
+        deactivate Database
+        deactivate DB
 
-    alt Classroom not found
-        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-        Endpoint-->>UI: 3.5.2 404 Not Found (Classroom not found.)
-    else Classroom exists
-        alt Active enrollments exist in classroom (classroom.Enrollments.Any(e => !e.IsDeleted && e.Status == "Active"))
-            Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không thể xóa lớp học có học sinh đang học.")
-            Endpoint-->>UI: 3.6.2 400 Bad Request (Không thể xóa lớp học...)
-        else No active enrollments
-            alt Classroom is Active (classroom.Status == "Active")
-                Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Không thể xóa lớp học đang ở trạng thái Hoạt động.")
-                Endpoint-->>UI: 3.7.2 400 Bad Request (Không thể xóa lớp học...)
-            else Classroom not Active (Pending/Cancelled)
-                note over Service: classroom.IsDeleted = true<br/>classroom.DeletedAt = DateTime.UtcNow<br/>classroom.UpdatedAt = DateTime.UtcNow
+        alt Classroom not found
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            Endpoint-->>UI: 3.5.2 404 Not Found (Không tìm thấy lớp học.)
+        else Classroom exists
+            alt Active enrollments exist in classroom (classroom.Enrollments.Any(e => !e.IsDeleted && e.Status == "Active"))
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không thể xóa lớp học có học sinh đang học.")
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Xóa lớp học thất bại.)
+            else No active enrollments
+                alt Classroom is Active (classroom.Status == "Active")
+                    Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Không thể xóa lớp học đang ở trạng thái Hoạt động.")
+                    Endpoint-->>UI: 3.7.2 400 Bad Request (Xóa lớp học thất bại.)
+                else Classroom not Active (Pending/Cancelled)
+                    note over Service: classroom.IsDeleted = true<br/>classroom.DeletedAt = DateTime.UtcNow<br/>classroom.UpdatedAt = DateTime.UtcNow
 
-                Service->>DB: 3.8 SaveChangesAsync()
-                activate DB
-                DB->>Database: 3.9 Execute UPDATE query
-                activate Database
-                Database-->>DB: 3.10 Rows affected
-                deactivate Database
-                deactivate DB
+                    Service->>DB: 3.8 SaveChangesAsync()
+                    activate DB
+                    DB->>Database: 3.9 Execute UPDATE query
+                    activate Database
+                    Database-->>DB: 3.10 Rows affected
+                    deactivate Database
+                    deactivate DB
 
-                Service-->>Endpoint: 3.11 (Succeeded = true)
-                deactivate Service
-                Endpoint-->>UI: 3.12 200 OK (Classroom deleted successfully.)
+                    Service-->>Endpoint: 3.11 (Succeeded = true)
+                    deactivate Service
+                    Endpoint-->>UI: 3.12 200 OK (Xóa lớp học thành công.)
+                end
             end
         end
     end

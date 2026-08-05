@@ -13,47 +13,47 @@ sequenceDiagram
     UI->>Endpoint: 2.1 POST /api/child-profiles (CreateChildProfileRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
-        Endpoint->>Service: 3.1 CreateChildProfileAsync(request)
-        activate Service
+    Endpoint->>Service: 3.1 CreateChildProfileAsync(request)
+    activate Service
 
-        Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted && u.IsActive)
+    Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted && u.IsActive)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 User entity or null
+    deactivate Database
+    deactivate DB
+
+    alt User not found/inactive
+        Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Người dùng liên kết không tồn tại.")
+        deactivate Service
+        Endpoint-->>UI: 3.5.2 400 Bad Request (Create child profile failed.)
+    else User valid
+        activate Service
+        note over Service: Map request to ChildProfile entity
+        
+        Service->>DB: 3.6 ChildProfileRepository.AddAsync(childProfile)
         activate DB
-        DB->>Database: 3.3 Execute SELECT query
+        DB-->>Service: 3.7 Success
+        deactivate DB
+
+        Service->>DB: 3.8 SaveChangesAsync()
+        activate DB
+        DB->>Database: 3.9 Execute INSERT query
         activate Database
-        Database-->>DB: 3.4 User entity or null
+        Database-->>DB: 3.10 Rows affected
         deactivate Database
         deactivate DB
 
-        alt User not found/inactive
-            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Người dùng liên kết không tồn tại.")
-            Endpoint-->>UI: 3.5.2 400 Bad Request (Người dùng liên kết...)
-        else User valid
-            note over Service: Map request to ChildProfile entity
-            
-            Service->>DB: 3.6 ChildProfileRepository.AddAsync(childProfile)
-            activate DB
-            DB-->>Service: 3.7 Success
-            deactivate DB
-
-            Service->>DB: 3.8 SaveChangesAsync()
-            activate DB
-            DB->>Database: 3.9 Execute INSERT query
-            activate Database
-            Database-->>DB: 3.10 Rows affected
-            deactivate Database
-            deactivate DB
-
-            alt SaveChangesAsync failed
-                Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Kiến tạo hồ sơ trẻ thất bại.")
-                Endpoint-->>UI: 3.11.2 400 Bad Request (Kiến tạo hồ sơ trẻ thất bại.)
-            else SaveChangesAsync success
-                Service-->>Endpoint: 3.12.1 (Succeeded = true, ChildProfileResponse)
-                deactivate Service
-                Endpoint-->>UI: 3.12.2 200 OK (ChildProfileResponse)
-            end
+        alt SaveChangesAsync failed
+            Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Kiến tạo hồ sơ trẻ thất bại.")
+            deactivate Service
+            Endpoint-->>UI: 3.11.2 400 Bad Request (Create child profile failed.)
+        else SaveChangesAsync success
+            activate Service
+            Service-->>Endpoint: 3.12.1 (Succeeded = true, ChildProfileResponse)
+            deactivate Service
+            Endpoint-->>UI: 3.12.2 200 OK (Child profile created.)
         end
     end
     deactivate Endpoint

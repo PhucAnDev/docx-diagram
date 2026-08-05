@@ -13,9 +13,9 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/child-profiles/{id} (UpdateChildProfileRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid child profile id.)
+    else id > 0
         Endpoint->>Service: 3.1 UpdateChildProfileAsync(id, request)
         activate Service
 
@@ -29,8 +29,10 @@ sequenceDiagram
 
         alt ChildProfile not found
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-            Endpoint-->>UI: 3.5.2 404 Not Found (Không tìm thấy hồ sơ trẻ.)
+            deactivate Service
+            Endpoint-->>UI: 3.5.2 404 Not Found (Child profile not found.)
         else ChildProfile exists
+            activate Service
             alt Request contains UserId to update
                 Service->>DB: 3.6 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted && u.IsActive)
                 activate DB
@@ -42,8 +44,10 @@ sequenceDiagram
 
                 alt User not found/inactive
                     Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Người dùng liên kết không tồn tại.")
-                    Endpoint-->>UI: 3.9.2 400 Bad Request (Người dùng liên kết...)
+                    deactivate Service
+                    Endpoint-->>UI: 3.9.2 400 Bad Request (Update child profile failed.)
                 else User valid
+                    activate Service
                     note over Service: Update childProfile.UserId
                 end
             end
@@ -61,11 +65,13 @@ sequenceDiagram
 
             alt Save changes failed
                 Service-->>Endpoint: 3.14.1 (Succeeded = false, Error = "Cập nhật hồ sơ trẻ thất bại.")
-                Endpoint-->>UI: 3.14.2 400 Bad Request (Cập nhật hồ sơ trẻ thất bại.)
+                deactivate Service
+                Endpoint-->>UI: 3.14.2 400 Bad Request (Update child profile failed.)
             else Save changes success
+                activate Service
                 Service-->>Endpoint: 3.15.1 (Succeeded = true, ChildProfileResponse)
                 deactivate Service
-                Endpoint-->>UI: 3.15.2 200 OK (ChildProfileResponse)
+                Endpoint-->>UI: 3.15.2 200 OK (Child profile updated.)
             end
         end
     end

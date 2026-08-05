@@ -1,7 +1,7 @@
 %%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
 sequenceDiagram
     title DELETE /api/child-profiles/{id}
-    actor User as User (Admin)
+    actor User as User (Admin/Teacher/Parent)
     participant UI as DeleteChildProfileUI
     participant Endpoint as :ChildProfilesController
     participant Service as :ChildProfileService
@@ -13,39 +13,47 @@ sequenceDiagram
     UI->>Endpoint: 2.1 DELETE /api/child-profiles/{id}
     activate Endpoint
 
-    Endpoint->>Service: 3.1 DeleteChildProfileAsync(id)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid child profile id.)
+    else id > 0
+        Endpoint->>Service: 3.1 DeleteChildProfileAsync(id)
+        activate Service
 
-    Service->>DB: 3.2 ChildProfileRepository.GetFirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted)
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 ChildProfile entity or null
-    deactivate Database
-    deactivate DB
-
-    alt ChildProfile not found
-        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-        Endpoint-->>UI: 3.5.2 404 Not Found (Không tìm thấy hồ sơ trẻ.)
-    else ChildProfile exists
-        note over Service: childProfile.IsDeleted = true<br/>childProfile.DeletedAt = DateTime.UtcNow<br/>childProfile.UpdatedAt = DateTime.UtcNow
-        
-        Service->>DB: 3.6 ChildProfileRepository.Update(childProfile)
-        Service->>DB: 3.7 SaveChangesAsync()
+        Service->>DB: 3.2 ChildProfileRepository.GetFirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted)
         activate DB
-        DB->>Database: 3.8 Execute UPDATE query
+        DB->>Database: 3.3 Execute SELECT query
         activate Database
-        Database-->>DB: 3.9 Rows affected
+        Database-->>DB: 3.4 ChildProfile entity or null
         deactivate Database
         deactivate DB
 
-        alt Save changes failed
-            Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Xóa hồ sơ trẻ thất bại.")
-            Endpoint-->>UI: 3.10.2 400 Bad Request (Xóa hồ sơ trẻ thất bại.)
-        else Save changes success
-            Service-->>Endpoint: 3.11.1 (Succeeded = true)
+        alt ChildProfile not found
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
             deactivate Service
-            Endpoint-->>UI: 3.11.2 200 OK (Child profile deleted successfully.)
+            Endpoint-->>UI: 3.5.2 404 Not Found (Child profile not found.)
+        else ChildProfile exists
+            activate Service
+            note over Service: childProfile.IsDeleted = true<br/>childProfile.DeletedAt = DateTime.UtcNow<br/>childProfile.UpdatedAt = DateTime.UtcNow
+            
+            Service->>DB: 3.6 ChildProfileRepository.Update(childProfile)
+            Service->>DB: 3.7 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.8 Execute UPDATE query
+            activate Database
+            Database-->>DB: 3.9 Rows affected
+            deactivate Database
+            deactivate DB
+
+            alt Save changes failed
+                Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Xóa hồ sơ trẻ thất bại.")
+                deactivate Service
+                Endpoint-->>UI: 3.10.2 400 Bad Request (Delete child profile failed.)
+            else Save changes success
+                activate Service
+                Service-->>Endpoint: 3.11.1 (Succeeded = true)
+                deactivate Service
+                Endpoint-->>UI: 3.11.2 200 OK (Child profile deleted.)
+            end
         end
     end
     deactivate Endpoint

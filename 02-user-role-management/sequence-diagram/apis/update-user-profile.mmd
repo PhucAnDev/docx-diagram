@@ -13,70 +13,67 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/Users/{id} (UpdateUserRequest)
     activate Endpoint
 
-    Endpoint->>Service: 3.1 UpdateUserAsync(id, request)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid user id.)
+    else id > 0
+        Endpoint->>Service: 3.1 UpdateUserAsync(id, request)
+        activate Service
 
-    Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, includeProperties: "Role")
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 User entity with Role or null
-    deactivate Database
-    deactivate DB
+        Service->>DB: 3.2 UserRepository.GetFirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, includeProperties: "Role")
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 User entity with Role or null
+        deactivate Database
+        deactivate DB
 
-    alt User not found (user == null)
-        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-        Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
-    else User exists
-        alt Email is updated and unique check fails
-            Service->>DB: 3.6 UserRepository.ExistsAsync(u => u.Email == request.Email && u.Id != id && !u.IsDeleted)
-            activate DB
-            DB->>Database: 3.7 Execute SELECT count query
-            activate Database
-            Database-->>DB: 3.8 Email exists boolean
-            deactivate Database
-            deactivate DB
-
-            alt Email already exists
-                Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Email ... đã được dùng...")
-                Endpoint-->>UI: 3.9.2 400 Bad Request (Email ... đã được dùng...)
-            end
-        else Email valid
-            alt RoleName is provided in update
-                Service->>DB: 3.10 RoleRepository.GetFirstOrDefaultAsync(r => r.RoleName == request.RoleName && r.IsActive)
+        alt User not found (user == null)
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
+        else User exists
+            opt Email is updated
+                Service->>DB: 3.6 UserRepository.ExistsAsync(u => u.Email == request.Email && u.Id != id && !u.IsDeleted)
                 activate DB
-                DB->>Database: 3.11 Execute SELECT query
+                DB->>Database: 3.7 Execute SELECT count query
                 activate Database
-                Database-->>DB: 3.12 Role entity or null
+                Database-->>DB: 3.8 Email exists boolean
+                deactivate Database
+                deactivate DB
+            end
+
+            opt RoleName is updated
+                Service->>DB: 3.9 RoleRepository.GetFirstOrDefaultAsync(r => r.RoleName == request.RoleName && r.IsActive)
+                activate DB
+                DB->>Database: 3.10 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.11 Role entity or null
+                deactivate Database
+                deactivate DB
+            end
+
+            alt Email already exists OR Role is invalid
+                Service-->>Endpoint: 3.12.1 (Succeeded = false, Errors list)
+                Endpoint-->>UI: 3.12.2 400 Bad Request (Update user failed.)
+            else Valid input
+                note over Service: Update remaining user fields (Avatar, FullName, Gender, Specialty, Phone, IsActive)<br/>user.UpdatedAt = DateTime.UtcNow
+                
+                Service->>DB: 3.13 UserRepository.Update(user)
+                activate DB
+                DB-->>Service: 3.14 Success
+                deactivate DB
+
+                Service->>DB: 3.15 SaveChangesAsync()
+                activate DB
+                DB->>Database: 3.16 Execute UPDATE query
+                activate Database
+                Database-->>DB: 3.17 Rows affected
                 deactivate Database
                 deactivate DB
 
-                alt Role not found or inactive
-                    Service-->>Endpoint: 3.13.1 (Succeeded = false, Error = "Role ... không tồn tại...")
-                    Endpoint-->>UI: 3.13.2 400 Bad Request (Role ... không tồn tại...)
-                else Role valid
-                    note over Service: Update user.RoleId & user.Role
-                end
+                Service-->>Endpoint: 3.18 (Succeeded = true, UserResponse)
+                deactivate Service
+                Endpoint-->>UI: 3.19 200 OK (User updated.)
             end
-            
-            note over Service: Update remaining user fields (Avatar, FullName, Gender, Specialty, Phone, IsActive)<br/>user.UpdatedAt = DateTime.UtcNow
-
-            Service->>DB: 3.14 UserRepository.Update(user)
-            activate DB
-            DB-->>Service: 3.15 Success
-            deactivate DB
-
-            Service->>DB: 3.16 SaveChangesAsync()
-            activate DB
-            DB->>Database: 3.17 Execute UPDATE query
-            activate Database
-            Database-->>DB: 3.18 Rows affected
-            deactivate Database
-            deactivate DB
-
-            Service-->>Endpoint: 3.19 (Succeeded = true, UserResponse)
-            deactivate Service
-            Endpoint-->>UI: 3.20 200 OK (UserResponse)
         end
     end
     deactivate Endpoint

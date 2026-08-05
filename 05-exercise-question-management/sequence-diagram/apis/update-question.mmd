@@ -13,9 +13,9 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/exercise-questions/{id} (UpdateExerciseQuestionRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid id.)
+    else id > 0
         Endpoint->>Service: 3.1 UpdateAsync(id, request)
         activate Service
 
@@ -29,65 +29,91 @@ sequenceDiagram
 
         alt ExerciseQuestion not found
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Question not found.)
         else ExerciseQuestion exists
-            alt QuestionSentence/AnswerSentence/InputType blank (BR-69)
-                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Vui lòng nhập đầy đủ các trường bắt buộc...")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Vui lòng nhập đầy đủ...)
-            else Required fields valid
-                alt AudioURL extension invalid (BR-71)
-                    Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Tập tin âm thanh không hợp lệ.")
-                    Endpoint-->>UI: 3.7.2 400 Bad Request (Tập tin âm thanh...)
-                else AudioURL extension valid
-                    alt ImageURL extension invalid (BR-71)
-                        Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Tập tin hình ảnh không hợp lệ.")
-                        Endpoint-->>UI: 3.8.2 400 Bad Request (Tập tin hình ảnh...)
-                    else ImageURL extension valid
-                        Service->>DB: 3.9 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.TeacherId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
-                        activate DB
-                        DB->>Database: 3.10 Execute SELECT query
-                        activate Database
-                        Database-->>DB: 3.11 Teacher entity or null
-                        deactivate Database
-                        deactivate DB
-
-                        alt Teacher not found/inactive/not Teacher (BR-56)
-                            Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Không tìm thấy giáo viên...")
-                            Endpoint-->>UI: 3.12.2 400 Bad Request (Không tìm thấy giáo viên...)
-                        else Teacher valid
-                            Service->>DB: 3.13 ExerciseRepository.GetFirstOrDefaultAsync(e => e.Id == request.ExerciseId && !e.IsDeleted)
-                            activate DB
-                            DB->>Database: 3.14 Execute SELECT query
-                            activate Database
-                            Database-->>DB: 3.15 Exercise entity or null
-                            deactivate Database
-                            deactivate DB
-
-                            alt Exercise not found (BR-60)
-                                Service-->>Endpoint: 3.16.1 (Succeeded = false, Error = "Không tìm thấy bài tập.")
-                                Endpoint-->>UI: 3.16.2 400 Bad Request (Không tìm thấy bài tập.)
-                            else Exercise valid
-                                note over Service: Update ExerciseQuestion fields<br/>entity.UpdatedAt = DateTime.UtcNow
-                                
-                                Service->>DB: 3.17 SaveChangesAsync()
-                                activate DB
-                                DB->>Database: 3.18 Execute UPDATE query
-                                activate Database
-                                Database-->>DB: 3.19 Rows affected
-                                deactivate Database
-                                deactivate DB
-
-                                Service->>DB: 3.20 ExerciseQuestionRepository.GetFirstOrDefaultAsync(q => q.Id == id, includeProperties: "Exercise,Teacher")
-                                activate DB
-                                DB->>Database: 3.21 Execute SELECT with includes
-                                activate Database
-                                Database-->>DB: 3.22 Updated ExerciseQuestion details
-                                deactivate Database
-                                deactivate DB
-
-                                Service-->>Endpoint: 3.23 (Succeeded = true, ExerciseQuestionResponse)
+            activate Service
+            alt QuestionSentence blank (BR-69)
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Vui lòng nhập câu hỏi mẫu.")
+                deactivate Service
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Update failed.)
+            else QuestionSentence valid
+                activate Service
+                alt AnswerSentence blank (BR-69)
+                    Service-->>Endpoint: 3.6.3 (Succeeded = false, Error = "Vui lòng nhập câu trả lời mẫu.")
+                    deactivate Service
+                    Endpoint-->>UI: 3.6.4 400 Bad Request (Update failed.)
+                else AnswerSentence valid
+                    activate Service
+                    alt InputType blank (BR-69)
+                        Service-->>Endpoint: 3.6.5 (Succeeded = false, Error = "Vui lòng nhập loại câu hỏi.")
+                        deactivate Service
+                        Endpoint-->>UI: 3.6.6 400 Bad Request (Update failed.)
+                    else InputType valid
+                        activate Service
+                        alt AudioURL extension invalid (BR-71)
+                            Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Tập tin âm thanh phải thuộc loại: .mp3, .wav, .ogg, .m4a.")
+                            deactivate Service
+                            Endpoint-->>UI: 3.7.2 400 Bad Request (Update failed.)
+                        else AudioURL extension valid
+                            activate Service
+                            alt ImageURL extension invalid (BR-71)
+                                Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Tập tin hình ảnh phải thuộc loại: .jpg, .jpeg, .png, .webp, .gif.")
                                 deactivate Service
-                                Endpoint-->>UI: 3.24 200 OK (ExerciseQuestionResponse)
+                                Endpoint-->>UI: 3.8.2 400 Bad Request (Update failed.)
+                            else ImageURL extension valid
+                                activate Service
+                                Service->>DB: 3.9 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.TeacherId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
+                                activate DB
+                                DB->>Database: 3.10 Execute SELECT query
+                                activate Database
+                                Database-->>DB: 3.11 Teacher entity or null
+                                deactivate Database
+                                deactivate DB
+
+                                alt Teacher not found/inactive/not Teacher (BR-56)
+                                    Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Không tìm thấy giáo viên...")
+                                    deactivate Service
+                                    Endpoint-->>UI: 3.12.2 400 Bad Request (Update failed.)
+                                else Teacher valid
+                                    activate Service
+                                    Service->>DB: 3.13 ExerciseRepository.GetFirstOrDefaultAsync(e => e.Id == request.ExerciseId && !e.IsDeleted)
+                                    activate DB
+                                    DB->>Database: 3.14 Execute SELECT query
+                                    activate Database
+                                    Database-->>DB: 3.15 Exercise entity or null
+                                    deactivate Database
+                                    deactivate DB
+
+                                    alt Exercise not found (BR-60)
+                                        Service-->>Endpoint: 3.16.1 (Succeeded = false, Error = "Không tìm thấy bài tập.")
+                                        deactivate Service
+                                        Endpoint-->>UI: 3.16.2 400 Bad Request (Update failed.)
+                                    else Exercise valid
+                                        activate Service
+                                        note over Service: Update ExerciseQuestion fields<br/>entity.UpdatedAt = DateTime.UtcNow
+                                        
+                                        Service->>DB: 3.17 SaveChangesAsync()
+                                        activate DB
+                                        DB->>Database: 3.18 Execute UPDATE query
+                                        activate Database
+                                        Database-->>DB: 3.19 Rows affected
+                                        deactivate Database
+                                        deactivate DB
+
+                                        Service->>DB: 3.20 ExerciseQuestionRepository.GetFirstOrDefaultAsync(q => q.Id == id, includeProperties: "Exercise,Teacher")
+                                        activate DB
+                                        DB->>Database: 3.21 Execute SELECT with includes
+                                        activate Database
+                                        Database-->>DB: 3.22 Updated ExerciseQuestion details
+                                        deactivate Database
+                                        deactivate DB
+
+                                        Service-->>Endpoint: 3.23 (Succeeded = true, ExerciseQuestionResponse)
+                                        deactivate Service
+                                        Endpoint-->>UI: 3.24 200 OK (ExerciseQuestionResponse)
+                                    end
+                                end
                             end
                         end
                     end

@@ -13,24 +13,30 @@ sequenceDiagram
     UI->>Endpoint: 2.1 GET /api/exercise-types/{id}
     activate Endpoint
 
-    Endpoint->>Service: 3.1 GetByIdAsync(id)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid id.)
+    else id > 0
+        Endpoint->>Service: 3.1 GetByIdAsync(id)
+        activate Service
 
-    Service->>DB: 3.2 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted, tracked: false)
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 ExerciseType entity or null
-    deactivate Database
-    deactivate DB
+        Service->>DB: 3.2 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted, tracked: false)
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 ExerciseType entity or null
+        deactivate Database
+        deactivate DB
 
-    alt ExerciseType not found
-        Service-->>Endpoint: 3.5.1 null
-        Endpoint-->>UI: 3.5.2 404 Not Found (ExerciseType not found.)
-    else ExerciseType exists
-        Service-->>Endpoint: 3.6.1 ExerciseTypeResponse
-        deactivate Service
-        Endpoint-->>UI: 3.6.2 200 OK (ExerciseTypeResponse)
+        alt ExerciseType not found
+            Service-->>Endpoint: 3.5.1 null
+            deactivate Service
+            Endpoint-->>UI: 3.5.2 404 Not Found (Exercise type not found.)
+        else ExerciseType exists
+            activate Service
+            Service-->>Endpoint: 3.6.1 ExerciseTypeResponse
+            deactivate Service
+            Endpoint-->>UI: 3.6.2 200 OK (ExerciseTypeResponse)
+        end
     end
     deactivate Endpoint
     deactivate UI

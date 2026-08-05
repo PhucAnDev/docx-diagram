@@ -13,9 +13,9 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/classrooms/{id} (UpdateClassroomRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Mã định danh lớp học không hợp lệ.)
+    else id > 0
         Endpoint->>Service: 3.1 UpdateClassroomAsync(id, request)
         activate Service
 
@@ -29,11 +29,11 @@ sequenceDiagram
 
         alt Classroom not found (classroom == null)
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-            Endpoint-->>UI: 3.5.2 404 Not Found (Classroom not found.)
+            Endpoint-->>UI: 3.5.2 404 Not Found (Không tìm thấy lớp học.)
         else Classroom exists
             alt StartDate >= EndDate
                 Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Ngày bắt đầu phải trước ngày kết thúc...")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Ngày bắt đầu phải trước ngày kết thúc...)
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Cập nhật thông tin lớp học thất bại.)
             else StartDate < EndDate
                 Service->>DB: 3.7 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
                 activate DB
@@ -45,7 +45,7 @@ sequenceDiagram
 
                 alt Teacher not found or inactive
                     Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Không tìm thấy giáo viên...")
-                    Endpoint-->>UI: 3.10.2 400 Bad Request (Không tìm thấy giáo viên...)
+                    Endpoint-->>UI: 3.10.2 400 Bad Request (Cập nhật thông tin lớp học thất bại.)
                 else Teacher valid
                     Service->>DB: 3.11 ProgramRepository.GetFirstOrDefaultAsync(p => p.Id == request.ProgramId && !p.IsDeleted && p.Status == "Active")
                     activate DB
@@ -57,7 +57,7 @@ sequenceDiagram
 
                     alt Program not found or inactive
                         Service-->>Endpoint: 3.14.1 (Succeeded = false, Error = "Không tìm thấy chương trình học...")
-                        Endpoint-->>UI: 3.14.2 400 Bad Request (Không tìm thấy chương trình học...)
+                        Endpoint-->>UI: 3.14.2 400 Bad Request (Cập nhật thông tin lớp học thất bại.)
                     else Program valid
                         Service->>DB: 3.15 SemesterRepository.GetFirstOrDefaultAsync(s => s.Id == request.SemesterId && !s.IsDeleted)
                         activate DB
@@ -69,11 +69,11 @@ sequenceDiagram
 
                         alt Semester not found
                             Service-->>Endpoint: 3.18.1 (Succeeded = false, Error = "Không tìm thấy học kỳ liên kết.")
-                            Endpoint-->>UI: 3.18.2 400 Bad Request (Không tìm thấy học kỳ liên kết.)
+                            Endpoint-->>UI: 3.18.2 400 Bad Request (Cập nhật thông tin lớp học thất bại.)
                         else Semester valid
                             alt Date outside semester bounds
                                 Service-->>Endpoint: 3.19.1 (Succeeded = false, Error = "Thời gian lớp học phải nằm trong học kỳ.")
-                                Endpoint-->>UI: 3.19.2 400 Bad Request (Thời gian lớp học...)
+                                Endpoint-->>UI: 3.19.2 400 Bad Request (Cập nhật thông tin lớp học thất bại.)
                             else Dates valid
                                 note over Service: Update classroom fields<br/>classroom.UpdatedAt = DateTime.UtcNow
                                 
@@ -95,7 +95,7 @@ sequenceDiagram
 
                                 Service-->>Endpoint: 3.26 (Succeeded = true, ClassroomResponse)
                                 deactivate Service
-                                Endpoint-->>UI: 3.27 200 OK (ClassroomResponse)
+                                Endpoint-->>UI: 3.27 200 OK (Cập nhật thông tin lớp học thành công.)
                             end
                         end
                     end

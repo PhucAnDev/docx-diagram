@@ -29,14 +29,17 @@ sequenceDiagram
 
         alt Classroom not found
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Không tìm thấy lớp học.)
         else Classroom exists
             alt Active enrollments exist in classroom (classroom.Enrollments.Any(e => !e.IsDeleted && e.Status == "Active"))
                 Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không thể xóa lớp học có học sinh đang học.")
+                deactivate Service
                 Endpoint-->>UI: 3.6.2 400 Bad Request (Xóa lớp học thất bại.)
             else No active enrollments
                 alt Classroom is Active (classroom.Status == "Active")
                     Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Không thể xóa lớp học đang ở trạng thái Hoạt động.")
+                    deactivate Service
                     Endpoint-->>UI: 3.7.2 400 Bad Request (Xóa lớp học thất bại.)
                 else Classroom not Active (Pending/Cancelled)
                     note over Service: classroom.IsDeleted = true<br/>classroom.DeletedAt = DateTime.UtcNow<br/>classroom.UpdatedAt = DateTime.UtcNow

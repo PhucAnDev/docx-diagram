@@ -29,6 +29,7 @@ sequenceDiagram
 
         alt Classroom not found (classroom == null)
             Service-->>Endpoint: 3.5.1 null
+            deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Không tìm thấy lớp học.)
         else Classroom exists
             Service-->>Endpoint: 3.6.1 ClassroomResponse

@@ -29,6 +29,7 @@ sequenceDiagram
 
         alt Teacher not found or inactive
             Service-->>Endpoint: 3.5.1 Empty PagedResponse
+            deactivate Service
             Endpoint-->>UI: 3.5.2 200 OK (Empty PagedResponse)
         else Teacher valid
             Service->>DB: 3.6 ClassroomRepository.GetPagedAsync(pageNumber, pageSize, c => !c.IsDeleted && c.UserId == teacherId, includeProperties: "User,User.Role,Program,Semester,Enrollments")

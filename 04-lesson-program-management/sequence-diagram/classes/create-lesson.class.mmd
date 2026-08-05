@@ -32,14 +32,14 @@ classDiagram
     class IUnitOfWork {
         <<interface>>
         +LessonRepository: ILessonRepository
-        +ProgramRepository: IProgramRepository
+        +Repository~T~() IGenericRepository~T~
         +SaveChangesAsync() Task~int~
     }
 
     class UnitOfWork {
         -context: AppDbContext
         +LessonRepository: ILessonRepository
-        +ProgramRepository: IProgramRepository
+        +Repository~T~() IGenericRepository~T~
         +SaveChangesAsync() Task~int~
     }
 

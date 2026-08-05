@@ -13,38 +13,46 @@ sequenceDiagram
     UI->>Endpoint: 2.1 DELETE /api/exercise-types/{id}
     activate Endpoint
 
-    Endpoint->>Service: 3.1 DeleteAsync(id)
-    activate Service
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid id.)
+    else id > 0
+        Endpoint->>Service: 3.1 DeleteAsync(id)
+        activate Service
 
-    Service->>DB: 3.2 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted, includeProperties: "Exercises")
-    activate DB
-    DB->>Database: 3.3 Execute SELECT query
-    activate Database
-    Database-->>DB: 3.4 ExerciseType entity or null
-    deactivate Database
-    deactivate DB
+        Service->>DB: 3.2 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted, includeProperties: "Exercises")
+        activate DB
+        DB->>Database: 3.3 Execute SELECT query
+        activate Database
+        Database-->>DB: 3.4 ExerciseType entity or null
+        deactivate Database
+        deactivate DB
 
-    alt ExerciseType not found
-        Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-        Endpoint-->>UI: 3.5.2 404 Not Found (ExerciseType not found.)
-    else ExerciseType exists
-        alt Has undeleted exercises (BR-62)
-            Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không thể xóa loại bài tập đang có chứa các bài tập.")
-            Endpoint-->>UI: 3.6.2 400 Bad Request (Không thể xóa...)
-        else No undeleted exercises
-            note over Service: entity.IsDeleted = true<br/>entity.DeletedAt = DateTime.UtcNow<br/>entity.UpdatedAt = DateTime.UtcNow
-
-            Service->>DB: 3.7 SaveChangesAsync()
-            activate DB
-            DB->>Database: 3.8 Execute UPDATE query
-            activate Database
-            Database-->>DB: 3.9 Rows affected
-            deactivate Database
-            deactivate DB
-
-            Service-->>Endpoint: 3.10 (Succeeded = true)
+        alt ExerciseType not found
+            Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
             deactivate Service
-            Endpoint-->>UI: 3.11 200 OK (ExerciseType deleted successfully.)
+            Endpoint-->>UI: 3.5.2 404 Not Found (Exercise type not found.)
+        else ExerciseType exists
+            activate Service
+            alt Has undeleted exercises (BR-62)
+                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không thể xóa loại bài tập đang có chứa các bài tập.")
+                deactivate Service
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Delete failed.)
+            else No undeleted exercises
+                activate Service
+                note over Service: entity.IsDeleted = true<br/>entity.DeletedAt = DateTime.UtcNow<br/>entity.UpdatedAt = DateTime.UtcNow
+
+                Service->>DB: 3.7 SaveChangesAsync()
+                activate DB
+                DB->>Database: 3.8 Execute UPDATE query
+                activate Database
+                Database-->>DB: 3.9 Rows affected
+                deactivate Database
+                deactivate DB
+
+                Service-->>Endpoint: 3.10 (Succeeded = true)
+                deactivate Service
+                Endpoint-->>UI: 3.11 200 OK (Exercise type deleted.)
+            end
         end
     end
     deactivate Endpoint

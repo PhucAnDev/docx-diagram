@@ -13,9 +13,9 @@ sequenceDiagram
     UI->>Endpoint: 2.1 PUT /api/exercise-types/{id} (UpdateExerciseTypeRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid id.)
+    else id > 0
         Endpoint->>Service: 3.1 UpdateAsync(id, request)
         activate Service
 
@@ -29,12 +29,16 @@ sequenceDiagram
 
         alt ExerciseType not found
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
-            Endpoint-->>UI: 3.5.2 404 Not Found (ExerciseType not found.)
+            deactivate Service
+            Endpoint-->>UI: 3.5.2 404 Not Found (Exercise type not found.)
         else ExerciseType exists
+            activate Service
             alt Request deactivates and has active exercises (BR-62)
                 Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Không thể ngưng hoạt động loại bài tập đang có chứa các bài tập đang hoạt động.")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Không thể ngưng hoạt động...)
+                deactivate Service
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Update failed.)
             else Status change valid
+                activate Service
                 Service->>DB: 3.7 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.TypeName == request.TypeName.Trim() && !t.IsDeleted && t.Id != id, tracked: false)
                 activate DB
                 DB->>Database: 3.8 Execute SELECT query
@@ -45,8 +49,10 @@ sequenceDiagram
 
                 alt Name duplicate exists
                     Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Tên loại bài tập đã tồn tại.")
-                    Endpoint-->>UI: 3.10.2 400 Bad Request (Tên loại bài tập đã tồn tại.)
+                    deactivate Service
+                    Endpoint-->>UI: 3.10.2 400 Bad Request (Update failed.)
                 else Name unique
+                    activate Service
                     note over Service: Update ExerciseType fields<br/>entity.UpdatedAt = DateTime.UtcNow
                     
                     Service->>DB: 3.11 SaveChangesAsync()

@@ -13,43 +13,41 @@ sequenceDiagram
     UI->>Endpoint: 2.1 POST /api/exercise-types (CreateExerciseTypeRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
-        Endpoint->>Service: 3.1 CreateAsync(request)
-        activate Service
+    Endpoint->>Service: 3.1 CreateAsync(request)
+    activate Service
 
-        Service->>DB: 3.2 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.TypeName == request.TypeName.Trim() && !t.IsDeleted, tracked: false)
+    Service->>DB: 3.2 ExerciseTypeRepository.GetFirstOrDefaultAsync(t => t.TypeName == request.TypeName.Trim() && !t.IsDeleted, tracked: false)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 Duplicate check result
+    deactivate Database
+    deactivate DB
+
+    alt Name duplicate exists
+        Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Tên loại bài tập đã tồn tại.")
+        deactivate Service
+        Endpoint-->>UI: 3.5.2 400 Bad Request (Create failed.)
+    else Name unique
+        activate Service
+        note over Service: Create ExerciseType entity
+        
+        Service->>DB: 3.6 ExerciseTypeRepository.AddAsync(entity)
         activate DB
-        DB->>Database: 3.3 Execute SELECT query
+        DB-->>Service: 3.7 Success
+        deactivate DB
+
+        Service->>DB: 3.8 SaveChangesAsync()
+        activate DB
+        DB->>Database: 3.9 Execute INSERT query
         activate Database
-        Database-->>DB: 3.4 Duplicate check result
+        Database-->>DB: 3.10 Rows affected
         deactivate Database
         deactivate DB
 
-        alt Name duplicate exists
-            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Tên loại bài tập đã tồn tại.")
-            Endpoint-->>UI: 3.5.2 400 Bad Request (Tên loại bài tập đã tồn tại.)
-        else Name unique
-            note over Service: Create ExerciseType entity
-            
-            Service->>DB: 3.6 ExerciseTypeRepository.AddAsync(entity)
-            activate DB
-            DB-->>Service: 3.7 Success
-            deactivate DB
-
-            Service->>DB: 3.8 SaveChangesAsync()
-            activate DB
-            DB->>Database: 3.9 Execute INSERT query
-            activate Database
-            Database-->>DB: 3.10 Rows affected
-            deactivate Database
-            deactivate DB
-
-            Service-->>Endpoint: 3.11 (Succeeded = true, ExerciseTypeResponse)
-            deactivate Service
-            Endpoint-->>UI: 3.12 200 OK (ExerciseTypeResponse)
-        end
+        Service-->>Endpoint: 3.11 (Succeeded = true, ExerciseTypeResponse)
+        deactivate Service
+        Endpoint-->>UI: 3.12 200 OK (ExerciseTypeResponse)
     end
     deactivate Endpoint
     deactivate UI

@@ -29,6 +29,7 @@ sequenceDiagram
 
         alt User not found (user == null)
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (User not found.)
         else User exists
             opt Email is updated
@@ -53,6 +54,7 @@ sequenceDiagram
 
             alt Email already exists OR Role is invalid
                 Service-->>Endpoint: 3.12.1 (Succeeded = false, Errors list)
+                deactivate Service
                 Endpoint-->>UI: 3.12.2 400 Bad Request (Update user failed.)
             else Valid input
                 note over Service: Update remaining user fields (Avatar, FullName, Gender, Specialty, Phone, IsActive)<br/>user.UpdatedAt = DateTime.UtcNow

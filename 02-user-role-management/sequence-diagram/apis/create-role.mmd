@@ -26,6 +26,7 @@ sequenceDiagram
 
     alt Role already exists
         Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Role already exists.")
+        deactivate Service
         Endpoint-->>UI: 3.5.2 400 Bad Request (Create role failed.)
     else Role is unique
         note over Service: Create Role entity with RoleName, Description, IsActive = true

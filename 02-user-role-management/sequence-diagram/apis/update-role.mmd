@@ -29,6 +29,7 @@ sequenceDiagram
 
         alt Role not found (role == null)
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Role not found.)
         else Role exists
             alt RoleName is updated and unique check fails
@@ -42,6 +43,7 @@ sequenceDiagram
 
                 alt Role already exists
                     Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "Role already exists.")
+                    deactivate Service
                     Endpoint-->>UI: 3.9.2 400 Bad Request (Update role failed.)
                 end
             else RoleName valid or not updated

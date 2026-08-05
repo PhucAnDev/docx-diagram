@@ -21,6 +21,7 @@ sequenceDiagram
         deactivate Service
         Endpoint-->>UI: 3.2.2 400 Bad Request (Kiến tạo lớp học thất bại.)
     else StartDate < EndDate
+        activate Service
         Service->>DB: 3.3 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted && u.IsActive && u.Role.RoleName == UserRole.Teacher, includeProperties: "Role")
         activate DB
         DB->>Database: 3.4 Execute SELECT query
@@ -34,6 +35,7 @@ sequenceDiagram
             deactivate Service
             Endpoint-->>UI: 3.6.2 400 Bad Request (Kiến tạo lớp học thất bại.)
         else Teacher valid
+            activate Service
             Service->>DB: 3.7 ProgramRepository.GetFirstOrDefaultAsync(p => p.Id == request.ProgramId && !p.IsDeleted && p.Status == "Active")
             activate DB
             DB->>Database: 3.8 Execute SELECT query
@@ -47,6 +49,7 @@ sequenceDiagram
                 deactivate Service
                 Endpoint-->>UI: 3.10.2 400 Bad Request (Kiến tạo lớp học thất bại.)
             else Program valid
+                activate Service
                 Service->>DB: 3.11 SemesterRepository.GetFirstOrDefaultAsync(s => s.Id == request.SemesterId && !s.IsDeleted)
                 activate DB
                 DB->>Database: 3.12 Execute SELECT query
@@ -60,11 +63,13 @@ sequenceDiagram
                     deactivate Service
                     Endpoint-->>UI: 3.14.2 400 Bad Request (Kiến tạo lớp học thất bại.)
                 else Semester valid
+                    activate Service
                     alt Date outside semester bounds (StartDate < semester.StartDate || EndDate > semester.EndDate)
                         Service-->>Endpoint: 3.15.1 (Succeeded = false, Error = "Thời gian lớp học phải nằm trong học kỳ.")
                         deactivate Service
                         Endpoint-->>UI: 3.15.2 400 Bad Request (Kiến tạo lớp học thất bại.)
                     else Dates valid
+                        activate Service
                         note over Service: Create Classroom entity
                         
                         Service->>DB: 3.16 ClassroomRepository.AddAsync(classroom)

@@ -1,6 +1,6 @@
 %%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
 sequenceDiagram
-    title PUT /api/semesters/{id}
+    title PUT /api/Semesters/{id}
     actor Admin as Admin
     participant UI as UpdateSemesterUI
     participant Endpoint as :SemestersController
@@ -10,12 +10,12 @@ sequenceDiagram
 
     Admin->>UI: 1.1 Sửa thông tin học kỳ và nhấn Lưu
     activate UI
-    UI->>Endpoint: 2.1 PUT /api/semesters/{id} (UpdateSemesterRequest)
+    UI->>Endpoint: 2.1 PUT /api/Semesters/{id} (UpdateSemesterRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
+    alt id <= 0
+        Endpoint-->>UI: 2.2 400 Bad Request (Invalid semester id.)
+    else id > 0
         Endpoint->>Service: 3.1 UpdateSemesterAsync(id, request)
         activate Service
 
@@ -29,12 +29,16 @@ sequenceDiagram
 
         alt Semester not found
             Service-->>Endpoint: 3.5.1 (Succeeded = false, NotFound = true)
+            deactivate Service
             Endpoint-->>UI: 3.5.2 404 Not Found (Semester not found.)
         else Semester exists
+            activate Service
             alt request.StartDate >= request.EndDate
                 Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Ngày bắt đầu phải trước...")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Ngày bắt đầu phải trước...)
+                deactivate Service
+                Endpoint-->>UI: 3.6.2 400 Bad Request (Update semester failed.)
             else Date range valid
+                activate Service
                 Service->>DB: 3.7 SchoolYearRepository.GetFirstOrDefaultAsync(sy => sy.Id == request.SchoolYearId && !sy.IsDeleted)
                 activate DB
                 DB->>Database: 3.8 Execute SELECT query
@@ -45,12 +49,16 @@ sequenceDiagram
 
                 alt SchoolYear not found
                     Service-->>Endpoint: 3.10.1 (Succeeded = false, Error = "Không tìm thấy niên khóa.")
-                    Endpoint-->>UI: 3.10.2 400 Bad Request (Không tìm thấy niên khóa.)
+                    deactivate Service
+                    Endpoint-->>UI: 3.10.2 400 Bad Request (Update semester failed.)
                 else SchoolYear valid
+                    activate Service
                     alt Semester dates outside SchoolYear dates
                         Service-->>Endpoint: 3.11.1 (Succeeded = false, Error = "Thời gian học kỳ phải nằm trong khoảng...")
-                        Endpoint-->>UI: 3.11.2 400 Bad Request (Thời gian học kỳ phải...)
+                        deactivate Service
+                        Endpoint-->>UI: 3.11.2 400 Bad Request (Update semester failed.)
                     else Semester dates inside SchoolYear
+                        activate Service
                         Service->>DB: 3.12 SemesterRepository.HasOverlappingAsync(request.SchoolYearId, request.StartDate, request.EndDate, excludeId: id)
                         activate DB
                         DB->>Database: 3.13 Execute semester overlap check query
@@ -61,8 +69,10 @@ sequenceDiagram
 
                         alt Semester overlapping in same SchoolYear exists
                             Service-->>Endpoint: 3.15.1 (Succeeded = false, Error = "Thời gian học kỳ bị trùng lặp...")
-                            Endpoint-->>UI: 3.15.2 400 Bad Request (Thời gian học kỳ...)
+                            deactivate Service
+                            Endpoint-->>UI: 3.15.2 400 Bad Request (Update semester failed.)
                         else Unique Semester dates
+                            activate Service
                             Service->>DB: 3.16 UserRepository.GetFirstOrDefaultAsync(u => u.Id == request.TeacherId && !u.IsDeleted && u.IsActive)
                             activate DB
                             DB->>Database: 3.17 Execute SELECT query
@@ -73,8 +83,10 @@ sequenceDiagram
 
                             alt Teacher not found/inactive
                                 Service-->>Endpoint: 3.19.1 (Succeeded = false, Error = "Không tìm thấy giáo viên phụ trách...")
-                                Endpoint-->>UI: 3.19.2 400 Bad Request (Không tìm thấy giáo viên...)
+                                deactivate Service
+                                Endpoint-->>UI: 3.19.2 400 Bad Request (Update semester failed.)
                             else Teacher valid
+                                activate Service
                                 note over Service: Update Semester fields
                                 
                                 Service->>DB: 3.20 SaveChangesAsync()
@@ -95,7 +107,7 @@ sequenceDiagram
 
                                 Service-->>Endpoint: 3.26 (Succeeded = true, SemesterResponse)
                                 deactivate Service
-                                Endpoint-->>UI: 3.27 200 OK (SemesterResponse)
+                                Endpoint-->>UI: 3.27 200 OK (Semester updated.)
                             end
                         end
                     end

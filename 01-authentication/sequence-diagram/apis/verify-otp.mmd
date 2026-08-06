@@ -36,11 +36,13 @@ sequenceDiagram
 
         alt Saved OTP is empty or mismatch (savedOtp != otp)
             Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Mã OTP không hợp lệ hoặc đã hết hạn.")
+            deactivate Service
             Endpoint-->>UI: 3.8.2 400 BadRequest (Mã OTP không hợp lệ hoặc đã hết hạn.)
         else OTP matches
+            activate Service
             Service-->>Endpoint: 3.9.1 (Succeeded = true)
             deactivate Service
-            Endpoint-->>UI: 3.9.2 200 OK (OTP verified successfully.)
+            Endpoint-->>UI: 3.9.2 200 OK (OTP xác nhận thành công.)
         end
     end
     deactivate Endpoint

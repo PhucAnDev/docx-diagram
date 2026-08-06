@@ -13,43 +13,41 @@ sequenceDiagram
     UI->>Endpoint: 2.1 POST /api/Analyze (CreateAnalyzeRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
-        Endpoint->>Service: 3.1 CreateAnalyzeAsync(request)
-        activate Service
+    Endpoint->>Service: 3.1 CreateAnalyzeAsync(request)
+    activate Service
 
-        Service->>DB: 3.2 ChildProfileRepository.GetFirstOrDefaultAsync(c => c.Id == ChildId && !c.IsDeleted)
+    Service->>DB: 3.2 ChildProfileRepository.GetFirstOrDefaultAsync(c => c.Id == request.ChildId && !c.IsDeleted)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 ChildProfile entity or null
+    deactivate Database
+    deactivate DB
+
+    alt Child profile not found (child == null)
+        Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Child profile not found.")
+        deactivate Service
+        Endpoint-->>UI: 3.5.2 400 Bad Request (Create analyze failed.)
+    else Child profile exists
+        activate Service
+        note over Service: Map request DTO to Analyze entity
+        
+        Service->>DB: 3.6 AnalyzeRepository.AddAsync(analyze)
         activate DB
-        DB->>Database: 3.3 Execute SELECT query
+        DB-->>Service: 3.7 Success
+        deactivate DB
+
+        Service->>DB: 3.8 SaveChangesAsync()
+        activate DB
+        DB->>Database: 3.9 Execute INSERT query
         activate Database
-        Database-->>DB: 3.4 ChildProfile entity or null
+        Database-->>DB: 3.10 Rows affected
         deactivate Database
         deactivate DB
 
-        alt Child profile not found (child == null)
-            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Child profile not found.")
-            Endpoint-->>UI: 3.5.2 400 Bad Request (Child profile not found.)
-        else Child profile exists
-            note over Service: Map request DTO to Analyze entity
-            
-            Service->>DB: 3.6 AnalyzeRepository.AddAsync(analyze)
-            activate DB
-            DB-->>Service: 3.7 Success
-            deactivate DB
-
-            Service->>DB: 3.8 SaveChangesAsync()
-            activate DB
-            DB->>Database: 3.9 Execute INSERT query
-            activate Database
-            Database-->>DB: 3.10 Rows affected
-            deactivate Database
-            deactivate DB
-
-            Service-->>Endpoint: 3.11 (Succeeded = true, AnalyzeResponse)
-            deactivate Service
-            Endpoint-->>UI: 3.12 200 OK (AnalyzeResponse)
-        end
+        Service-->>Endpoint: 3.11 (Succeeded = true, AnalyzeResponse)
+        deactivate Service
+        Endpoint-->>UI: 3.12 200 OK (Analyze created.)
     end
     deactivate Endpoint
     deactivate UI

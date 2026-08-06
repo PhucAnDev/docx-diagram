@@ -1,6 +1,6 @@
 %%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
 sequenceDiagram
-    title GET /api/analyze/child/{childId}
+    title GET /api/Analyze/child/{childId}
     actor User as User (Admin/Teacher/Parent)
     participant UI as ChildAnalyzeUI
     participant Endpoint as :AnalyzeController
@@ -10,7 +10,7 @@ sequenceDiagram
 
     User->>UI: 1.1 Yêu cầu hiển thị lịch sử phân tích AI của trẻ
     activate UI
-    UI->>Endpoint: 2.1 GET /api/analyze/child/{childId}
+    UI->>Endpoint: 2.1 GET /api/Analyze/child/{childId}
     activate Endpoint
 
     alt childId <= 0
@@ -43,7 +43,7 @@ sequenceDiagram
         Endpoint->>Service: 3.3 GetAnalyzesByChildIdAsync(childId)
         activate Service
 
-        Service->>DB: 3.4 AnalyzeRepository.FindAsync(r => r.ChildId == childId && !r.IsDeleted)
+        Service->>DB: 3.4 AnalyzeRepository.FindAsync(r => r.ChildId == childId && !r.IsDeleted, orderBy: CreatedAt DESC)
         activate DB
         DB->>Database: 3.5 Execute SELECT query
         activate Database

@@ -30,8 +30,10 @@ sequenceDiagram
 
     alt User not found or Token expired (VerifyTokenExpiry < DateTime.UtcNow)
         Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Token không hợp lệ hoặc đã hết hạn.")
+        deactivate Service
         Endpoint-->>UI: 3.5.2 400 BadRequest (Token không hợp lệ hoặc đã hết hạn.)
     else Token valid and not expired
+        activate Service
         note over Service: user.IsEmailVerified = true<br/>user.IsActive = true<br/>user.VerifyToken = null<br/>user.VerifyTokenExpiry = null<br/>user.UpdatedAt = DateTime.UtcNow
         
         Service->>DB: 3.6 SaveChangesAsync()
@@ -44,7 +46,7 @@ sequenceDiagram
 
         Service-->>Endpoint: 3.9 (Succeeded = true)
         deactivate Service
-        Endpoint-->>UI: 3.10 200 OK (Email verified successfully.)
+        Endpoint-->>UI: 3.10 200 OK (Email xác minh thành công. Bạn có thể đăng nhập.)
     end
     deactivate Endpoint
     deactivate UI

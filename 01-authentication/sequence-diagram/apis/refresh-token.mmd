@@ -18,62 +18,77 @@ sequenceDiagram
     Endpoint->>Service: 3.1 RefreshTokenAsync(request)
     activate Service
 
-    Service->>TokenService: 3.2 GetPrincipalFromExpiredToken(AccessToken)
-    activate TokenService
-    TokenService-->>Service: 3.3 ClaimsPrincipal or null
-    deactivate TokenService
+    alt try block
+        Service->>TokenService: 3.2 GetPrincipalFromExpiredToken(AccessToken)
+        activate TokenService
+        TokenService-->>Service: 3.3 ClaimsPrincipal or null
+        deactivate TokenService
 
-    alt ClaimsPrincipal is null
-        Service-->>Endpoint: 3.4.1 (Succeeded = false, Error = "Invalid access token.")
-        Endpoint-->>UI: 3.4.2 400 BadRequest (Invalid access token.)
-    else ClaimsPrincipal valid
-        note over Service: Lấy userIdClaim từ principal
-        alt userIdClaim cannot be parsed
-            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Invalid token.")
-            Endpoint-->>UI: 3.5.2 400 BadRequest (Invalid token.)
-        else UserId valid
-            Service->>DB: 3.6 UserRepository.GetFirstOrDefaultAsync(u => u.Id == userId, includeProperties: "Role")
-            activate DB
-            DB->>Database: 3.7 Execute SELECT query
-            activate Database
-            Database-->>DB: 3.8 User entity with Role or null
-            deactivate Database
-            deactivate DB
+        alt ClaimsPrincipal is null
+            Service-->>Endpoint: 3.4.1 (Succeeded = false, Error = "Invalid access token.")
+            deactivate Service
+            Endpoint-->>UI: 3.4.2 400 BadRequest (Refresh token failed.)
+        else ClaimsPrincipal valid
+            activate Service
+            note over Service: Lấy userIdClaim từ principal
+            alt userIdClaim cannot be parsed
+                Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Invalid token.")
+                deactivate Service
+                Endpoint-->>UI: 3.5.2 400 BadRequest (Refresh token failed.)
+            else UserId valid
+                activate Service
+                Service->>DB: 3.6 UserRepository.GetFirstOrDefaultAsync(u => u.Id == userId, includeProperties: "Role")
+                activate DB
+                DB->>Database: 3.7 Execute SELECT query
+                activate Database
+                Database-->>DB: 3.8 User entity with Role or null
+                deactivate Database
+                deactivate DB
 
-            alt User not found (user == null)
-                Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "User not found.")
-                Endpoint-->>UI: 3.9.2 400 BadRequest (User not found.)
-            else User exists
-                Service->>Cache: 3.10 GetStringAsync("refreshToken:" + user.Email)
-                activate Cache
-                Cache-->>Service: 3.11 Saved RefreshToken string
-                deactivate Cache
-
-                alt RefreshToken does not match (savedRefreshToken != request.RefreshToken)
-                    Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Invalid refresh token.")
-                    Endpoint-->>UI: 3.12.2 400 BadRequest (Invalid refresh token.)
-                else RefreshToken matches
-                    Service->>TokenService: 3.13 GenerateAccessToken(user)
-                    activate TokenService
-                    TokenService-->>Service: 3.14 New AccessToken string
-                    deactivate TokenService
-
-                    Service->>TokenService: 3.15 GenerateRefreshToken()
-                    activate TokenService
-                    TokenService-->>Service: 3.16 New RefreshToken string
-                    deactivate TokenService
-
-                    Service->>Cache: 3.17 SetStringAsync("refreshToken:" + user.Email, newRefreshToken, expireIn7Days)
+                alt User not found (user == null)
+                    Service-->>Endpoint: 3.9.1 (Succeeded = false, Error = "User not found.")
+                    deactivate Service
+                    Endpoint-->>UI: 3.9.2 400 BadRequest (Refresh token failed.)
+                else User exists
+                    activate Service
+                    Service->>Cache: 3.10 GetStringAsync("refreshToken:" + user.Email)
                     activate Cache
-                    Cache-->>Service: 3.18 Success
+                    Cache-->>Service: 3.11 Saved RefreshToken string
                     deactivate Cache
 
-                    Service-->>Endpoint: 3.19 (Succeeded = true, TokenModel)
-                    deactivate Service
-                    Endpoint-->>UI: 3.20 200 OK (TokenModel)
+                    alt RefreshToken does not match (savedRefreshToken != request.RefreshToken)
+                        Service-->>Endpoint: 3.12.1 (Succeeded = false, Error = "Invalid refresh token.")
+                        deactivate Service
+                        Endpoint-->>UI: 3.12.2 400 BadRequest (Refresh token failed.)
+                    else RefreshToken matches
+                        activate Service
+                        Service->>TokenService: 3.13 GenerateAccessToken(user)
+                        activate TokenService
+                        TokenService-->>Service: 3.14 New AccessToken string
+                        deactivate TokenService
+
+                        Service->>TokenService: 3.15 GenerateRefreshToken()
+                        activate TokenService
+                        TokenService-->>Service: 3.16 New RefreshToken string
+                        deactivate TokenService
+
+                        Service->>Cache: 3.17 SetStringAsync("refreshToken:" + user.Email, newRefreshToken, expireIn7Days)
+                        activate Cache
+                        Cache-->>Service: 3.18 Success
+                        deactivate Cache
+
+                        Service-->>Endpoint: 3.19 (Succeeded = true, TokenModel)
+                        deactivate Service
+                        Endpoint-->>UI: 3.20 200 OK (Token refreshed successfully.)
+                    end
                 end
             end
         end
+    catch Exception ex
+        activate Service
+        Service-->>Endpoint: 3.21.1 (Succeeded = false, Error = "Refresh token failed: ...")
+        deactivate Service
+        Endpoint-->>UI: 3.21.2 400 BadRequest (Refresh token failed.)
     end
     deactivate Endpoint
     deactivate UI

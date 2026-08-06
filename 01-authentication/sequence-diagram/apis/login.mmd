@@ -31,17 +31,23 @@ sequenceDiagram
 
         alt User not found (user == null)
             Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Invalid email or password.")
-            Endpoint-->>UI: 3.5.2 401 Unauthorized (Invalid email or password.)
+            deactivate Service
+            Endpoint-->>UI: 3.5.2 401 Unauthorized (Login failed.)
         else User found
+            activate Service
             note over Service: BCrypt.Verify(request.Password, user.PasswordHash)
             alt Password hash mismatch
                 Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Invalid email or password.")
-                Endpoint-->>UI: 3.6.2 401 Unauthorized (Invalid email or password.)
+                deactivate Service
+                Endpoint-->>UI: 3.6.2 401 Unauthorized (Login failed.)
             else Password matches
+                activate Service
                 alt Email not verified (!user.IsEmailVerified)
                     Service-->>Endpoint: 3.7.1 (Succeeded = false, Error = "Email chưa được xác minh...")
-                    Endpoint-->>UI: 3.7.2 401 Unauthorized (Email chưa được xác minh...)
+                    deactivate Service
+                    Endpoint-->>UI: 3.7.2 401 Unauthorized (Login failed.)
                 else Email verified
+                    activate Service
                     Service->>TokenService: 3.8 GenerateAccessToken(user)
                     activate TokenService
                     TokenService-->>Service: 3.9 AccessToken string
@@ -59,7 +65,7 @@ sequenceDiagram
 
                     Service-->>Endpoint: 3.14 (Succeeded = true, TokenModel)
                     deactivate Service
-                    Endpoint-->>UI: 3.15 200 OK (TokenModel)
+                    Endpoint-->>UI: 3.15 200 OK (Login successful.)
                 end
             end
         end

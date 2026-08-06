@@ -13,61 +13,63 @@ sequenceDiagram
     UI->>Endpoint: 2.1 POST /api/school-years (CreateSchoolYearRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
-        Endpoint->>Service: 3.1 CreateSchoolYearAsync(request)
+    Endpoint->>Service: 3.1 CreateSchoolYearAsync(request)
+    activate Service
+
+    alt BR-43: request.StartDate >= request.EndDate
+        Service-->>Endpoint: 3.2.1 (Succeeded = false, Error = "Ngày bắt đầu phải trước...")
+        deactivate Service
+        Endpoint-->>UI: 3.2.2 400 Bad Request (Create school year failed.)
+    else Date range valid
         activate Service
+        Service->>DB: 3.3 SchoolYearRepository.HasOverlappingAsync(request.StartDate, request.EndDate)
+        activate DB
+        DB->>Database: 3.4 Execute overlap check query
+        activate Database
+        Database-->>DB: 3.5 Overlap result (true/false)
+        deactivate Database
+        deactivate DB
 
-        alt BR-43: request.StartDate >= request.EndDate
-            Service-->>Endpoint: 3.2.1 (Succeeded = false, Error = "Ngày bắt đầu phải trước...")
-            Endpoint-->>UI: 3.2.2 400 Bad Request (Ngày bắt đầu phải trước...)
-        else Date range valid
-            Service->>DB: 3.3 SchoolYearRepository.HasOverlappingAsync(request.StartDate, request.EndDate)
-            activate DB
-            DB->>Database: 3.4 Execute overlap check query
-            activate Database
-            Database-->>DB: 3.5 Overlap result (true/false)
-            deactivate Database
-            deactivate DB
-
-            alt Overlapping school year exists
-                Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Thời gian niên khóa bị trùng lặp...")
-                Endpoint-->>UI: 3.6.2 400 Bad Request (Thời gian niên khóa...)
-            else No overlap
-                alt request.Status == "Active"
-                    Service->>DB: 3.7.1 SchoolYearRepository.HasActiveSchoolYearAsync()
-                    activate DB
-                    DB->>Database: 3.7.2 Execute active check query
-                    activate Database
-                    Database-->>DB: 3.7.3 Active check result (true/false)
-                    deactivate Database
-                    deactivate DB
-
-                    alt Already has Active school year
-                        Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Đã có một niên khóa khác đang ở trạng thái Hoạt động.")
-                        Endpoint-->>UI: 3.8.2 400 Bad Request (Đã có một niên khóa...)
-                    else Unique Active or non-Active status
-                        note over Service: Create SchoolYear entity
-                    end
-                else Status not Active
-                    note over Service: Create SchoolYear entity
-                end
-
-                note over Service: Save to database
-                Service->>DB: 3.9 SchoolYearRepository.AddAsync(schoolYear)
-                Service->>DB: 3.10 SaveChangesAsync()
+        alt Overlapping school year exists
+            Service-->>Endpoint: 3.6.1 (Succeeded = false, Error = "Thời gian niên khóa bị trùng lặp...")
+            deactivate Service
+            Endpoint-->>UI: 3.6.2 400 Bad Request (Create school year failed.)
+        else No overlap
+            activate Service
+            alt request.Status == "Active"
+                Service->>DB: 3.7.1 SchoolYearRepository.HasActiveSchoolYearAsync()
                 activate DB
-                DB->>Database: 3.11 Execute INSERT query
+                DB->>Database: 3.7.2 Execute active check query
                 activate Database
-                Database-->>DB: 3.12 Rows affected
+                Database-->>DB: 3.7.3 Active check result (true/false)
                 deactivate Database
                 deactivate DB
 
-                Service-->>Endpoint: 3.13 (Succeeded = true, SchoolYearResponse)
-                deactivate Service
-                Endpoint-->>UI: 3.14 200 OK (SchoolYearResponse)
+                alt Already has Active school year
+                    Service-->>Endpoint: 3.8.1 (Succeeded = false, Error = "Đã có một niên khóa khác đang ở trạng thái Hoạt động.")
+                    deactivate Service
+                    Endpoint-->>UI: 3.8.2 400 Bad Request (Create school year failed.)
+                else Unique Active or non-Active status
+                    activate Service
+                    note over Service: Create SchoolYear entity
+                end
+            else Status not Active
+                note over Service: Create SchoolYear entity
             end
+
+            note over Service: Save to database
+            Service->>DB: 3.9 SchoolYearRepository.AddAsync(schoolYear)
+            Service->>DB: 3.10 SaveChangesAsync()
+            activate DB
+            DB->>Database: 3.11 Execute INSERT query
+            activate Database
+            Database-->>DB: 3.12 Rows affected
+            deactivate Database
+            deactivate DB
+
+            Service-->>Endpoint: 3.13 (Succeeded = true, SchoolYearResponse)
+            deactivate Service
+            Endpoint-->>UI: 3.14 200 OK (School year created.)
         end
     end
     deactivate Endpoint

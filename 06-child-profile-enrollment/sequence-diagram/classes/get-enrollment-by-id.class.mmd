@@ -14,6 +14,7 @@ classDiagram
 
     class EnrollmentService {
         -unitOfWork: IUnitOfWork
+        -mapper: IMapper
         +GetEnrollmentByIdAsync(id: int) Task~EnrollmentResponse~
     }
 

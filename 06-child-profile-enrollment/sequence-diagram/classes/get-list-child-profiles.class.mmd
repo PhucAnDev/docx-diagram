@@ -4,7 +4,7 @@ classDiagram
 
     class ChildProfilesController {
         -childProfileService: IChildProfileService
-        +GetList(pageNumber: int, pageSize: int) Task~ActionResult~
+        +Get(query: PaginationQuery) Task~ActionResult~
     }
 
     class IChildProfileService {
@@ -14,6 +14,7 @@ classDiagram
 
     class ChildProfileService {
         -unitOfWork: IUnitOfWork
+        -mapper: IMapper
         +GetListChildProfileAsync(pageNumber: int, pageSize: int) Task~PagedResponse~ChildProfileResponse~~
     }
 

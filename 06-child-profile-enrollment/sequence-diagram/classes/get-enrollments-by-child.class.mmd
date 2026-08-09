@@ -4,7 +4,7 @@ classDiagram
 
     class EnrollmentsController {
         -enrollmentService: IEnrollmentService
-        +GetEnrollmentsByChildId(childId: int) Task~ActionResult~
+        +GetByChild(childId: int) Task~ActionResult~
     }
 
     class IEnrollmentService {
@@ -14,6 +14,7 @@ classDiagram
 
     class EnrollmentService {
         -unitOfWork: IUnitOfWork
+        -mapper: IMapper
         +GetEnrollmentsByChildIdAsync(childId: int) Task~IEnumerable~EnrollmentResponse~~
     }
 

@@ -1,6 +1,6 @@
 %%{init: {'theme':'base', 'themeVariables': {'actorBkg':'#ffffff','actorBorder':'#000000','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#000000','signalTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','loopTextColor':'#000000','noteBkgColor':'#ffffff','noteBorderColor':'#000000','noteTextColor':'#000000','activationBorderColor':'#000000','activationBkgColor':'#ffffff','sequenceNumberColor':'#000000'}, 'sequence': {'width':150,'height':65,'actorFontSize':16,'messageFontSize':16,'wrap':true,'wrapPadding':10}}}%%
 sequenceDiagram
-    title POST /api/lessons
+    title POST /api/Lessons
     actor Admin as User (Admin/Teacher)
     participant UI as CreateLessonUI
     participant Endpoint as :LessonsController
@@ -10,46 +10,44 @@ sequenceDiagram
 
     Admin->>UI: 1.1 Nhập thông tin bài học mới (ProgramId, tên, thứ tự, kỹ năng, thời gian...)
     activate UI
-    UI->>Endpoint: 2.1 POST /api/lessons (CreateLessonRequest)
+    UI->>Endpoint: 2.1 POST /api/Lessons (CreateLessonRequest)
     activate Endpoint
 
-    alt ModelState.IsValid == false
-        Endpoint-->>UI: 2.2 400 Bad Request
-    else ModelState.IsValid == true
-        Endpoint->>Service: 3.1 CreateLessonAsync(request)
-        activate Service
+    Endpoint->>Service: 3.1 CreateLessonAsync(request)
+    activate Service
 
-        Service->>DB: 3.2 ProgramRepository.GetFirstOrDefaultAsync(p => p.Id == request.ProgramId && !p.IsDeleted)
+    Service->>DB: 3.2 Repository<Program>().GetFirstOrDefaultAsync(filter: p => p.Id == request.ProgramId && !p.IsDeleted, tracked: false)
+    activate DB
+    DB->>Database: 3.3 Execute SELECT query
+    activate Database
+    Database-->>DB: 3.4 Program entity or null
+    deactivate Database
+    deactivate DB
+
+    alt Program not found
+        Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Program not found.")
+        deactivate Service
+        Endpoint-->>UI: 3.5.2 400 Bad Request (Create lesson failed.)
+    else Program exists
+        activate Service
+        note over Service: Create Lesson entity
+        
+        Service->>DB: 3.6 LessonRepository.AddAsync(lesson)
         activate DB
-        DB->>Database: 3.3 Execute SELECT query
+        DB-->>Service: 3.7 Success
+        deactivate DB
+
+        Service->>DB: 3.8 SaveChangesAsync()
+        activate DB
+        DB->>Database: 3.9 Execute INSERT query
         activate Database
-        Database-->>DB: 3.4 Program entity or null
+        Database-->>DB: 3.10 Rows affected
         deactivate Database
         deactivate DB
 
-        alt Program not found
-            Service-->>Endpoint: 3.5.1 (Succeeded = false, Error = "Program not found.")
-            Endpoint-->>UI: 3.5.2 400 Bad Request (Program not found.)
-        else Program exists
-            note over Service: Create Lesson entity
-            
-            Service->>DB: 3.6 LessonRepository.AddAsync(lesson)
-            activate DB
-            DB-->>Service: 3.7 Success
-            deactivate DB
-
-            Service->>DB: 3.8 SaveChangesAsync()
-            activate DB
-            DB->>Database: 3.9 Execute INSERT query
-            activate Database
-            Database-->>DB: 3.10 Rows affected
-            deactivate Database
-            deactivate DB
-
-            Service-->>Endpoint: 3.11 (Succeeded = true, LessonResponse)
-            deactivate Service
-            Endpoint-->>UI: 3.12 200 OK (LessonResponse)
-        end
+        Service-->>Endpoint: 3.11 (Succeeded = true, LessonResponse)
+        deactivate Service
+        Endpoint-->>UI: 3.12 200 OK (Lesson created.)
     end
     deactivate Endpoint
     deactivate UI

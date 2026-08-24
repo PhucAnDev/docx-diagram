@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" modified="2026-08-24T20:00:00.000Z" agent="Mozilla/5.0" etag="godotxr-vr-app-package-diagram" version="21.0.0" type="device">
+  <diagram id="vr-app-package-diagram" name="VR Application Package Diagram">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Outer Package Container -->
+        <mxCell id="root_pkg" value="VR Application Package Diagram (GodotXR Client)" style="shape=folder;fontStyle=1;tabWidth=320;tabHeight=26;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=center;verticalAlign=top;spacingTop=6;fontSize=16;fontColor=#1A2530;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1120" height="760" as="geometry" />
+        </mxCell>
+
+        <!-- Top Left: Scenes & Worlds Layer -->
+        <mxCell id="layer_scenes" value="Scenes &amp; Worlds" style="shape=folder;fontStyle=1;tabWidth=150;tabHeight=22;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFF2CC;strokeColor=#D6B656;align=center;verticalAlign=top;spacingTop=4;fontSize=14;fontColor=#000000;" vertex="1" parent="root_pkg">
+          <mxGeometry x="30" y="50" width="460" height="210" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_worlds" value="Worlds&#10;(Supermarket, Fishing, Tutorial, StarterHub)" style="shape=folder;fontStyle=1;tabWidth=80;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_scenes">
+          <mxGeometry x="20" y="40" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_uiscenes" value="UIScenes&#10;(LoginScene, LoadingStage, SpectatorScene)" style="shape=folder;fontStyle=1;tabWidth=80;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_scenes">
+          <mxGeometry x="240" y="40" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_playerrig" value="PlayerRig&#10;(FOV Player, LoadingPlatform)" style="shape=folder;fontStyle=1;tabWidth=80;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_scenes">
+          <mxGeometry x="130" y="125" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Top Right: Hardware & Plugins (addons) -->
+        <mxCell id="layer_addons" value="Hardware &amp; Plugins (addons)" style="shape=folder;fontStyle=1;tabWidth=220;tabHeight=22;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFF2CC;strokeColor=#D6B656;align=center;verticalAlign=top;spacingTop=4;fontSize=14;fontColor=#000000;" vertex="1" parent="root_pkg">
+          <mxGeometry x="530" y="50" width="560" height="210" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_xrtools" value="godot-xr-tools&#10;(Controllers, Locomotion, Grab/Teleport)" style="shape=folder;fontStyle=1;tabWidth=110;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_addons">
+          <mxGeometry x="20" y="45" width="240" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_openxrvendors" value="godotopenxrvendors&#10;(Meta Quest Vendor &amp; Action Map)" style="shape=folder;fontStyle=1;tabWidth=130;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_addons">
+          <mxGeometry x="290" y="45" width="250" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_meshcombiner" value="meshcombiner&#10;(Mesh Optimization for VR)" style="shape=folder;fontStyle=1;tabWidth=100;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_addons">
+          <mxGeometry x="150" y="125" width="240" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Bottom Left: Scripts & Controllers Layer -->
+        <mxCell id="layer_scripts" value="Scripts &amp; Controllers" style="shape=folder;fontStyle=1;tabWidth=170;tabHeight=22;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFF2CC;strokeColor=#D6B656;align=center;verticalAlign=top;spacingTop=4;fontSize=14;fontColor=#000000;" vertex="1" parent="root_pkg">
+          <mxGeometry x="30" y="290" width="540" height="440" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_coremanager" value="CoreManager&#10;(GameManager, LevelControllers, SessionData)" style="shape=folder;fontStyle=1;tabWidth=100;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_scripts">
+          <mxGeometry x="20" y="40" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_apicontrollers" value="APIControllers&#10;(AuthController, ChildProfileApi, ResultApi, FilesApi)" style="shape=folder;fontStyle=1;tabWidth=110;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_scripts">
+          <mxGeometry x="280" y="40" width="240" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_speechaudio" value="SpeechAudio&#10;(AzureSpeechManager, MicInput, MicController)" style="shape=folder;fontStyle=1;tabWidth=100;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_scripts">
+          <mxGeometry x="20" y="170" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_telemetryreplay" value="TelemetryReplay&#10;(TelementryController, SessionUploader, Replayer)" style="shape=folder;fontStyle=1;tabWidth=120;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_scripts">
+          <mxGeometry x="280" y="170" width="240" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_npcsenv" value="NPCsEnvironment&#10;(NPC Behaviors, Articulation Triggers, RoadMesh)" style="shape=folder;fontStyle=1;tabWidth=120;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_scripts">
+          <mxGeometry x="150" y="300" width="250" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Bottom Right: Prefabs & Assets Layer -->
+        <mxCell id="layer_prefabs" value="Prefabs &amp; Assets" style="shape=folder;fontStyle=1;tabWidth=140;tabHeight=22;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFF2CC;strokeColor=#D6B656;align=center;verticalAlign=top;spacingTop=4;fontSize=14;fontColor=#000000;" vertex="1" parent="root_pkg">
+          <mxGeometry x="600" y="290" width="490" height="440" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_interactables" value="InteractableObjects&#10;(3D Fruits, Store Items, Fishing Rod)" style="shape=folder;fontStyle=1;tabWidth=130;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_prefabs">
+          <mxGeometry x="20" y="40" width="210" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_uiprefabs" value="UIPrefabs&#10;(3D UI Canvas, Dialogs, Hint Triggers)" style="shape=folder;fontStyle=1;tabWidth=90;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_prefabs">
+          <mxGeometry x="260" y="40" width="210" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_audiosounds" value="AudioSounds&#10;(Speech Prompts, Guide Sound, Effects)" style="shape=folder;fontStyle=1;tabWidth=100;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_prefabs">
+          <mxGeometry x="20" y="170" width="210" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_shadersmaterials" value="ShadersMaterials&#10;(Water Shader, Cyber Shader, Surface Mat)" style="shape=folder;fontStyle=1;tabWidth=130;tabHeight=18;tabPosition=left;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#FFFFFF;strokeColor=#B8860B;align=center;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="layer_prefabs">
+          <mxGeometry x="260" y="170" width="210" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="edge_uiscenes_apictrl" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_uiscenes" target="pkg_apicontrollers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_worlds_core" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_worlds" target="pkg_coremanager">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_playerrig_xrtools" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_playerrig" target="pkg_xrtools">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_core_apictrl" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_coremanager" target="pkg_apicontrollers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_core_speech" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_coremanager" target="pkg_speechaudio">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_core_telemetry" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_coremanager" target="pkg_telemetryreplay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_speech_telemetry" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_speechaudio" target="pkg_telemetryreplay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_telemetry_apictrl" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_telemetryreplay" target="pkg_apicontrollers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_worlds_interactables" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_worlds" target="pkg_interactables">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_uiscenes_uiprefabs" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;endFill=0;strokeColor=#000000;strokeWidth=1.5;html=1;" edge="1" parent="root_pkg" source="pkg_uiscenes" target="pkg_uiprefabs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

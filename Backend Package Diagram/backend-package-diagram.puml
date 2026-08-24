@@ -1,0 +1,79 @@
+@startuml Backend Package Diagram
+
+skinparam backgroundColor #F4F7FA
+skinparam defaultFontName "Segoe UI", "Arial", sans-serif
+
+skinparam package {
+    BackgroundColor #FFF2CC
+    BorderColor #D6B656
+    FontColor #000000
+    FontSize 13
+    FontStyle bold
+}
+
+package "Backend Package Diagram" as Root #DAE8FC {
+
+    package "API Layer" as APILayer #FFF2CC {
+        package "Controllers" as Controllers
+        package "Middlewares" as Middlewares
+        package "Extensions" as Extensions
+        package "Payloads" as Payloads
+    }
+
+    package "Domain Layer" as DomainLayer #FFF2CC {
+        package "Interfaces" as Interfaces
+        package "Entities" as Entities
+        package "Common" as Common
+    }
+
+    package "Application Layer" as AppLayer #FFF2CC {
+        package "Services" as Services
+        package "Utils" as Utils
+        package "Configurations" as Configurations
+        package "Dtos" as Dtos
+        package "Validations" as Validations
+        package "Exceptions" as Exceptions
+        package "Hubs" as Hubs
+    }
+
+    package "Infrastructure Layer" as InfraLayer #FFF2CC {
+        package "Entity Configurations" as EntityConfigs
+        package "Context" as Context
+        package "Repositories" as Repositories
+        package "Migrations" as Migrations
+    }
+
+    ' Internal Dependencies
+    Controllers ..> Payloads
+    Controllers ..> Extensions
+
+    Entities ..> Common
+    Interfaces ..> Common
+
+    Services ..> Dtos
+    Services ..> Validations
+    Services ..> Exceptions
+    Services ..> Utils
+    Services ..> Configurations
+    Services ..> Hubs
+
+    Context ..> EntityConfigs
+    Repositories ..> Context
+
+    ' Cross-Layer Dependencies
+    APILayer ..> AppLayer
+    APILayer ..> DomainLayer
+    Controllers ..> Interfaces
+
+    Services ..> Interfaces
+    Services ..> Entities
+    AppLayer ..> DomainLayer
+
+    EntityConfigs ..> Entities
+    Context ..> Entities
+    Repositories ..> Entities
+    Repositories ..> Interfaces
+    InfraLayer ..> DomainLayer
+}
+
+@enduml

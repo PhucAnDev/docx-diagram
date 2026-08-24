@@ -1,0 +1,63 @@
+@startuml VR Application Package Diagram (GodotXR.Client)
+
+skinparam backgroundColor #F4F7FA
+skinparam defaultFontName "Segoe UI", "Arial", sans-serif
+
+skinparam package {
+    BackgroundColor #FFF2CC
+    BorderColor #D6B656
+    FontColor #000000
+    FontSize 13
+    FontStyle bold
+}
+
+package "VR Application Package Diagram" as Root #DAE8FC {
+
+    package "Scenes & Worlds" as ScenesLayer #FFF2CC {
+        package "Worlds" as Worlds
+        package "UIScenes" as UIScenes
+        package "PlayerRig" as PlayerRig
+    }
+
+    package "Scripts & Controllers" as ScriptsLayer #FFF2CC {
+        package "CoreManager" as CoreManager
+        package "APIControllers" as APIControllers
+        package "SpeechAudio" as SpeechAudio
+        package "TelemetryReplay" as TelemetryReplay
+        package "NPCsEnvironment" as NPCsEnvironment
+    }
+
+    package "Prefabs & Assets" as PrefabsLayer #FFF2CC {
+        package "InteractableObjects" as InteractableObjects
+        package "UIPrefabs" as UIPrefabs
+        package "AudioSounds" as AudioSounds
+        package "ShadersMaterials" as ShadersMaterials
+    }
+
+    package "Hardware & Plugins (addons)" as AddonsLayer #FFF2CC {
+        package "godot-xr-tools" as XRTools
+        package "godotopenxrvendors" as OpenXRVendors
+        package "meshcombiner" as MeshCombiner
+    }
+
+    ' Internal Layer Dependencies
+    UIScenes ..> APIControllers
+    Worlds ..> CoreManager
+    PlayerRig ..> XRTools
+
+    CoreManager ..> APIControllers
+    CoreManager ..> SpeechAudio
+    CoreManager ..> TelemetryReplay
+    CoreManager ..> NPCsEnvironment
+
+    SpeechAudio ..> TelemetryReplay
+    TelemetryReplay ..> APIControllers
+
+    Worlds ..> InteractableObjects
+    UIScenes ..> UIPrefabs
+    CoreManager ..> AudioSounds
+
+    PlayerRig ..> OpenXRVendors
+}
+
+@enduml
